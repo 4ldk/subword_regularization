@@ -2,10 +2,10 @@ import os
 import random
 import shutil
 
-from datasets import load_dataset
 import hydra
 import numpy as np
 import torch
+from datasets import load_dataset
 from torch import optim
 from tqdm import tqdm
 from transformers import AutoModelForTokenClassification, AutoTokenizer

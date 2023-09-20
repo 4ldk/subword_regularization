@@ -1,9 +1,9 @@
 import random
 
-from datasets import load_dataset
 import hydra
 import numpy as np
 import torch
+from datasets import load_dataset
 from tqdm import tqdm
 from transformers import AutoModelForTokenClassification, AutoTokenizer, BertConfig
 
