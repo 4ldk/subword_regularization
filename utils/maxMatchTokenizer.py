@@ -1,0 +1,250 @@
+import random
+
+import nltk
+import torch
+from nltk.corpus import stopwords
+from transformers import AutoTokenizer
+
+
+class MaxMatchTokenizer:
+    def __init__(self, vocab=None, midPref="##", headPref="", p=0.0, padding=False, ner_dict=None, stop_word=False):
+        self.midPref = midPref
+        self.headPref = headPref
+        self.doNaivePreproc = False
+        if vocab:
+            self.__build(vocab)
+
+        self.p = p
+        self.padding = padding
+        self.ner_dict = ner_dict
+        self.subword_dict = {
+            0: 0,
+            1: 2,
+            2: 2,
+            3: 4,
+            4: 4,
+            5: 6,
+            6: 6,
+            7: 8,
+            8: 8,
+            9: 9,
+        }  # Chage from subword B-xxx label to I-xxx label
+        if stop_word:
+
+            nltk.download("stopwords")
+            self.stop_words = stopwords.words("english")
+        self.use_stop_word = stop_word
+
+    def __build(self, vocab):
+        self.unkToken = "[UNK]"
+        self.vocab = set(vocab)
+        self.vocab.add(self.unkToken)
+        self.vocabSize = len(self.vocab)
+
+        self.maxLength = max(len(w) for w in self.vocab)
+
+        self.word2id = {}
+        self.id2word = {}
+        for w in sorted(self.vocab):
+            self.word2id[w] = len(self.word2id)
+            self.id2word[self.word2id[w]] = w
+
+    # This function corresponds to Algorithm 1 in the paper.
+    def tokenizeWord(self, word, p=False):
+        p = p if p else self.p
+        if self.use_stop_word:
+            if word in self.stop_words:
+                return [word]
+
+        subwords = []
+        i = 0
+        wordLength = len(word)
+        while i < wordLength:
+            subword = None
+            for j in range(1, min(self.maxLength + 1, wordLength - i + 1)):
+                w = word[i : i + j]
+
+                if 0 == i:
+                    w = self.headPref + w
+                if 0 < i:
+                    w = self.midPref + w
+
+                if w in self.vocab:
+                    # random for subword regularization
+                    if j == 1 or p < random.random():
+                        # drop acception with p
+                        subword = w
+
+            if subword is None:
+                # return unk if including unk
+                return [self.unkToken]
+            else:
+                i += len(subword) - len(self.midPref) if 0 < i else len(subword) - len(self.headPref)
+                subwords.append(subword)
+        return subwords
+
+    def tokenize(self, text, p=False):
+        p = p if p else self.p
+        if type(text) == list:
+            return [self.tokenize(line, p) for line in text]
+        if self.doNaivePreproc:
+            text = self.naivePreproc(text)
+        subwords = [(i, subword) for i, word in enumerate(text.split()) for subword in self.tokenizeWord(word, p)]
+        word_ids = [sw[0] for sw in subwords]
+        subwords = [sw[1] for sw in subwords]
+        return subwords, word_ids
+
+    def encode(self, text, p=False):
+        p = p if p else self.p
+        if type(text) == list:
+            subwords = [self.clsTokenId] + [self.word2id[w] for line in text for w in self.tokenize(line, p)[0] + [self.sepToken]]
+            word_ids = [None] + [self.tokenize(line, p)[1] for line in text + [None]]
+
+            return subwords, word_ids
+        subwords, word_ids = self.tokenize(text, p)
+        subwords = [self.clsTokenId] + [self.word2id[w] for w in subwords] + [self.sepTokenId]
+        word_ids = [None] + word_ids + [None]
+        if self.padding:
+            if len(subwords) >= self.padding:
+                subwords = subwords[: self.padding]
+                word_ids = word_ids[: self.padding]
+                attention_mask = [1] * self.padding
+            else:
+                attention_len = len(subwords)
+                pad_len = self.padding - len(subwords)
+                subwords += [self.padTokenId] * pad_len
+                word_ids += [None] * pad_len
+                attention_mask = [1] * attention_len + [0] * pad_len
+
+        else:
+            attention_mask = [1] * len(subwords)
+
+        return subwords, word_ids, attention_mask
+
+    def loadVocab(self, path):
+        words = [line.strip() for line in open(path)]
+        self.vocab = set()
+        self.word2id = {}
+        self.id2word = {}
+        for i, w in enumerate(words):
+            self.vocab.add(w)
+            self.word2id[w] = i
+            self.id2word[i] = w
+        self.vocabSize = len(self.vocab)
+        self.maxLength = max(len(w) for w in self.vocab)
+
+        self.unkToken = "[UNK]"
+        self.unkTokenId = self.word2id[self.unkToken]
+        self.clsToken = "[CLS]"
+        self.clsTokenId = self.word2id[self.clsToken]
+        self.sepToken = "[SEP]"
+        self.sepTokenId = self.word2id[self.sepToken]
+
+    def loadBertTokenizer(self, bertTokenizer, doNaivePreproc=False):
+        if doNaivePreproc:
+            self.doNaivePreproc = doNaivePreproc
+            self.bertTokenizer = bertTokenizer
+
+        self.midPref = "##"
+        self.vocab = set()
+        self.word2id = {}
+        self.id2word = {}
+
+        for w, i in bertTokenizer.vocab.items():
+            self.vocab.add(w)
+            self.word2id[w] = i
+            self.id2word[i] = w
+        self.vocabSize = len(self.vocab)
+        self.maxLength = max(len(w) for w in self.vocab)
+
+        self.unkToken = bertTokenizer.unk_token
+        self.unkTokenId = bertTokenizer.unk_token_id
+        self.clsToken = bertTokenizer.cls_token
+        self.clsTokenId = bertTokenizer.cls_token_id
+        self.sepToken = bertTokenizer.sep_token
+        self.sepTokenId = bertTokenizer.sep_token_id
+        self.bosToken = bertTokenizer.bos_token
+        self.bosTokenId = bertTokenizer.bos_token_id
+        self.eosToken = bertTokenizer.eos_token
+        self.eosTokenId = bertTokenizer.eos_token_id
+        self.padToken = bertTokenizer.pad_token
+        self.padTokenId = bertTokenizer.pad_token_id
+
+        if self.use_stop_word:
+            self.stop_words = [s_word for s_word in self.stop_words if s_word in self.vocab]
+
+    def naivePreproc(self, text):
+        return " ".join(self.bertTokenizer.tokenize(text)).replace(" " + self.midPref, "")
+
+    def dataset_encode(self, data, p=False, return_tensor=True, subword_label="I"):
+        p = p if p else self.p
+        labels, texts = (
+            data["labels"],
+            data["tokens"],
+        )
+
+        tokens = [self.encode(" ".join(text), p=p) for text in texts]
+        input_ids = [tkns[0] for tkns in tokens]
+        word_ids = [tkns[1] for tkns in tokens]
+        attention_mask = [tkns[2] for tkns in tokens]
+
+        subword_labels = []
+        for i, label in enumerate(labels):
+            previous_word_idx = None
+            label_ids = []
+            for word_idx in word_ids[i]:
+                if word_idx is None:
+                    label_ids.append(self.ner_dict["PAD"])
+                elif word_idx != previous_word_idx:  # Only label the first token of a given word.
+                    label_ids.append(label[word_idx])
+                else:
+                    if subword_label == "I":
+                        label_ids.append(self.subword_dict[label[word_idx]])
+                    elif subword_label == "B":
+                        label_ids.append(label[word_idx])
+                    elif subword_label == "PAD":
+                        label_ids.append(self.ner_dict["PAD"])
+                    else:
+                        print("subword_label must be 'I', 'B' or 'PAD'.")
+                        exit(1)
+
+                previous_word_idx = word_idx
+            subword_labels.append(label_ids)
+
+        if return_tensor:
+            data = {
+                "input_ids": torch.tensor(input_ids, dtype=torch.int),
+                "attention_mask": torch.tensor(attention_mask, dtype=torch.int),
+                "subword_labels": torch.tensor(subword_labels, dtype=torch.int),
+                "tokens": data["tokens"],
+                "labels": data["labels"],
+            }
+        else:
+            data = {
+                "input_ids": input_ids,
+                "attention_mask": attention_mask,
+                "subword_labels": subword_labels,
+                "tokens": data["tokens"],
+                "labels": data["labels"],
+            }
+        return data
+
+
+if __name__ == "__main__":
+    sent = "The English data is a collection 's of news wire articles from the Reuters Corpus ."
+    sent2 = "Converts a single index or a sequence of indices in a token or a sequence of tokens ."
+    print(sent)
+
+    mmt = MaxMatchTokenizer(p=0.3, padding=40)
+    bert_tokeninzer = AutoTokenizer.from_pretrained("bert-base-cased")
+    mmt.loadBertTokenizer(bertTokenizer=bert_tokeninzer, doNaivePreproc=True)
+
+    tokens = mmt.tokenize([sent, sent2])
+    # tokens = [list(chain.from_iterable(tkns)) for tkns in tokens]
+    ids = [mmt.encode(tkns) for tkns in [sent, sent2]]
+    # , truncation=True return_tensors="pt", max_length=80, padding="max_length")
+    print(ids[0][0])
+    print(ids[0][1])
+    print(len(ids[0][1]))
+    # print(ids.word_ids())
+    print(bert_tokeninzer.decode(ids[0][0]))
