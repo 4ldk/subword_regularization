@@ -139,7 +139,7 @@ def path_to_data(path):
     }
 
     for sentence in tqdm(data):
-        if len(sentence) < 5:
+        if len(sentence) == 0:
             continue
 
         divided = [s.split(" ") for s in sentence]

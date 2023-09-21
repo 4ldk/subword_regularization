@@ -17,8 +17,9 @@ def main(cfg):
     model_name = cfg.model_name
     use_scheduler = cfg.use_scheduler
     stop_word = cfg.stop_word
+    as_aug = cfg.as_aug
     test = cfg.test
-    path = "./model/best.pth"
+    path = f"./model/epoch{num_epoch-1}.pth"
 
     lr_min = cfg.lr_min
     warmup_lr_init = cfg.warmup_lr_init
@@ -37,6 +38,7 @@ def main(cfg):
         warmup_lr_init,
         use_scheduler,
         stop_word,
+        as_aug,
     )
     bert_pred.pred(length, path, test)
 

@@ -32,6 +32,7 @@ def main(cfg):
     warmup_lr_init = cfg.warmup_lr_init
 
     stop_word = cfg.stop_word
+    as_aug = cfg.as_aug
 
     train(
         batch_size,
@@ -47,6 +48,7 @@ def main(cfg):
         warmup_lr_init,
         use_scheduler,
         stop_word,
+        as_aug,
     )
 
 
@@ -64,6 +66,7 @@ def train(
     warmup_lr_init,
     use_scheduler=False,
     stop_word=False,
+    as_aug=False,
 ):
     random.seed(seed)
     np.random.seed(seed)
@@ -122,10 +125,9 @@ def train(
     losses = []
     for epoch in range(num_epoch):
         model.train()
-        epoch_p = p  # if epoch % 2 == 0 else 0.0
-        train_data = mmt.dataset_encode(train_data, p=epoch_p)
+        train_data = mmt.dataset_encode(train_data, p=p)
         train_loader = get_dataloader(train_data, batch_size=batch_size, shuffle=True)
-        train_bar = tqdm(train_loader, leave=False, desc=f"epoch{epoch} ")
+        train_bar = tqdm(train_loader, leave=False, desc=f"Epoch{epoch} ")
         batch_loss = []
         for input, sub_input, label in train_bar:
             input, sub_input, label = (
@@ -142,6 +144,26 @@ def train(
 
             train_bar.set_postfix(loss=loss.to("cpu").item())
             batch_loss.append(loss.to("cpu").item())
+
+        if as_aug:
+            train_data = mmt.dataset_encode(train_data, p=0)
+            train_loader = get_dataloader(train_data, batch_size=batch_size, shuffle=True)
+            train_bar = tqdm(train_loader, leave=False, desc=f"Epoch{epoch}_2 ")
+            for input, sub_input, label in train_bar:
+                input, sub_input, label = (
+                    input.to(device),
+                    sub_input.to(device),
+                    label.to(device),
+                )
+                loss = model.forward(input, sub_input, label)
+                loss = torch.sum(-loss)
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+                train_bar.set_postfix(loss=loss.to("cpu").item())
+                batch_loss.append(loss.to("cpu").item())
 
         losses.append(sum(batch_loss) / len(batch_loss))
 
