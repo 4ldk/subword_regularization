@@ -4,20 +4,22 @@ hydra:
 
 
 batch_size: 20
-lr: 3e-5
-num_epoch: 100
+lr: 1e-5
+num_epoch: 30
 length: 128
-p: 0.3
+p: 0
 seed: 42
 device: "cuda"
 model_name: "bert-base-cased"
-stop_word: True
-as_aug: True
+stop_word: False
+as_aug: False
+boi1: True
+
 test: "2003" # 2003, 2023, crossweigh
 
-use_scheduler: True
+use_scheduler: False
 warmup_t: 10
 lr_min: 1e-7
 warmup_lr_init: 1e-6
 
-path: "C:/Users/chenr/Desktop/python/subword_regularization/outputs/train_pred_eval/p3_long/model/epoch49.pth"
+path: "C:/Users/chenr/Desktop/python/subword_regularization/outputs/run/2023-09-22/02-54-41/model/epoch29.pth"

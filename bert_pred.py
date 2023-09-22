@@ -8,6 +8,7 @@ from tqdm import tqdm
 from transformers import AutoModelForTokenClassification, AutoTokenizer, BertConfig
 
 import conlleval
+from utils.boi_convert import convert, boi2_to_1
 from utils.datamodule import BertCRF
 from utils.maxMatchTokenizer import MaxMatchTokenizer
 from utils.utils import get_texts_and_labels, path_to_data, val_to_key
@@ -18,10 +19,11 @@ def main(cfg):
     length = cfg.length
     path = cfg.path
     test = cfg.test
-    pred(length, path, test)
+    boi1 = cfg.boi1
+    pred(length, path, test, boi1)
 
 
-def pred(length, path, test):
+def pred(length, path, test, boi1):
     batch_size = 1
     random.seed(42)
     np.random.seed(42)
@@ -42,7 +44,8 @@ def pred(length, path, test):
     elif test == "crossweigh":
         test_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/conllcw.txt")
         encoding = "utf-8"
-
+    if boi1:
+        test_dataset = boi2_to_1(test_dataset)
     print("Dataset Loaded")
     ner_dict = {
         "O": 0,
@@ -155,12 +158,10 @@ def pred(length, path, test):
             out = "\n".join(out)
             output.append(out)
             output.append("\n\n")
-    output = "".join(output)
-
-    with open("./output.txt", "w", encoding=encoding) as f:
-        f.write(output)
-
+    output = "".join(output).split("\n")
     path = "./output.txt"
+    convert(output, path, encoding=encoding)
+
     with open(path, encoding=encoding) as f:
         file_iter = f.readlines()
     conlleval.evaluate_conll_file(file_iter)

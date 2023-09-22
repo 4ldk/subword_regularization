@@ -10,6 +10,7 @@ from torch import optim
 from tqdm import tqdm
 from transformers import AutoModelForTokenClassification, AutoTokenizer
 
+from utils.boi_convert import boi2_to_1
 from utils.datamodule import BertCRF
 from utils.maxMatchTokenizer import MaxMatchTokenizer
 from utils.utils import CosineScheduler, f1_score, get_dataloader, get_texts_and_labels
@@ -33,6 +34,7 @@ def main(cfg):
 
     stop_word = cfg.stop_word
     as_aug = cfg.as_aug
+    boi1 = cfg.boi1
 
     train(
         batch_size,
@@ -49,6 +51,7 @@ def main(cfg):
         use_scheduler,
         stop_word,
         as_aug,
+        boi1,
     )
 
 
@@ -67,6 +70,7 @@ def train(
     use_scheduler=False,
     stop_word=False,
     as_aug=False,
+    boi1=False,
 ):
     random.seed(seed)
     np.random.seed(seed)
@@ -79,6 +83,10 @@ def train(
     dataset = load_dataset("conll2003")
     train_dataset = dataset["train"]
     valid_dataset = dataset["validation"]
+
+    if boi1:
+        train_dataset = boi2_to_1(train_dataset)
+        valid_dataset = boi2_to_1(valid_dataset)
 
     ner_dict = {
         "O": 0,

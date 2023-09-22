@@ -8,6 +8,7 @@ from tqdm import tqdm
 from transformers import AutoModelForTokenClassification, AutoTokenizer, BertConfig
 
 import conlleval
+from utils.boi_convert import convert
 from utils.datamodule import BertCRF
 from utils.maxMatchTokenizer import MaxMatchTokenizer
 from utils.utils import get_texts_and_labels, path_to_data, val_to_key
@@ -155,11 +156,9 @@ def pred(length, path, test, epoch=0):
             out = "\n".join(out)
             output.append(out)
             output.append("\n\n")
-    output = "".join(output)
-
-    path = f"./output{epoch}.txt"
-    with open(path, "w", encoding=encoding) as f:
-        f.write(output)
+    output = "".join(output).split("\n")
+    path = "./output.txt"
+    convert(output, path, encoding=encoding)
 
     with open(path, encoding=encoding) as f:
         file_iter = f.readlines()

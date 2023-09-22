@@ -23,6 +23,7 @@ def main(cfg):
 
     lr_min = cfg.lr_min
     warmup_lr_init = cfg.warmup_lr_init
+    boi1 = cfg.boi1
 
     bert_train.train(
         batch_size,
@@ -39,8 +40,9 @@ def main(cfg):
         use_scheduler,
         stop_word,
         as_aug,
+        boi1,
     )
-    bert_pred.pred(length, path, test)
+    bert_pred.pred(length, path, test, boi1)
 
 
 if __name__ == "__main__":
