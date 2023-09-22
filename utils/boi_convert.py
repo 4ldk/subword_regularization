@@ -35,17 +35,17 @@ def boi2_to_1(dataset):
 
     new_tags = []
     for ner in ner_tags:
-        # ner = [O,B,I,I,I,I]
+        # ner = [O,B-LOC,I-LOC,I-LOC,B-LOC,I-LOC,B-MISC,B-MISC]
         pre_tag = -1
         new_ner = []
         for n in ner:
-            if pre_tag in [-1, 0] and n in [1, 3, 5, 7]:
+            if n in [1, 3, 5, 7] and pre_tag not in [n + 1, n]:
                 pre_tag = copy.deepcopy(n)
                 n += 1
             else:
                 pre_tag = copy.deepcopy(n)
             new_ner.append(copy.deepcopy(n))
-        # new_ner = [O,I,I,I,I,I]
+        # new_ner = [O,I-LOC,I-LOC,I-LOC,B-LOC,I-LOC,I-MISC,B-MISC]
         new_tags.append(new_ner)
 
     new_dataset = {
