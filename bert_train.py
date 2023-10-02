@@ -163,8 +163,7 @@ def train(
                     sub_input.to(device),
                     label.to(device),
                 )
-                loss = model.forward(input, sub_input, label)
-                loss = torch.sum(-loss)
+                loss = -model.forward(input, sub_input, label)
 
                 optimizer.zero_grad()
                 loss.backward()
