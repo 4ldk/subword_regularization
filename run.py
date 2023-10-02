@@ -18,12 +18,14 @@ def main(cfg):
     use_scheduler = cfg.use_scheduler
     stop_word = cfg.stop_word
     as_aug = cfg.as_aug
-    test = cfg.test
     path = f"./model/epoch{num_epoch-1}.pth"
 
     lr_min = cfg.lr_min
     warmup_lr_init = cfg.warmup_lr_init
     boi1 = cfg.boi1
+
+    test = cfg.test
+    leak = cfg.leak
 
     bert_train.train(
         batch_size,
@@ -42,7 +44,7 @@ def main(cfg):
         as_aug,
         boi1,
     )
-    bert_pred.pred(length, path, test, boi1)
+    bert_pred.pred(length, path, test, leak)
 
 
 if __name__ == "__main__":

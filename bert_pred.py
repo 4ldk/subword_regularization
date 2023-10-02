@@ -19,11 +19,11 @@ def main(cfg):
     length = cfg.length
     path = cfg.path
     test = cfg.test
-    boi1 = cfg.boi1
-    pred(length, path, test, boi1)
+    leak = cfg.leak
+    pred(length, path, test, leak)
 
 
-def pred(length, path, test, boi1):
+def pred(length, path, test, leak):
     batch_size = 1
     random.seed(42)
     np.random.seed(42)
@@ -44,8 +44,8 @@ def pred(length, path, test, boi1):
     elif test == "crossweigh":
         test_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/conllcw.txt")
         encoding = "utf-8"
-    if boi1:
-        test_dataset = boi2_to_1(test_dataset)
+
+    trained_tokens = "C:/Users/chenr/Desktop/python/subword_regularization/ne_data_train.txt"
     print("Dataset Loaded")
     ner_dict = {
         "O": 0,
@@ -153,6 +153,21 @@ def pred(length, path, test, boi1):
 
             out_pos = [val_to_key(o_p, pos_dict) for o_p in out_pos]
             out_ner = [val_to_key(o_n, ner_dict) for o_n in out_ner]
+
+            if leak == "non_leak":
+                with open(trained_tokens) as f:
+                    train_token = f.read().split("\n")
+                    train_token = [train_row.split(", ")[0] for train_row in train_token]
+                leak_check = [(n != "O") and (t in train_token) for t, n in zip(out_token, out_ner)]
+                if True in leak_check:
+                    continue
+            elif leak == "only_leak":
+                with open(trained_tokens) as f:
+                    train_token = f.read().split("\n")
+                    train_token = [train_row.split(", ")[0] for train_row in train_token]
+                leak_check = [(n != "O") and (t not in train_token) for t, n in zip(out_token, out_ner)]
+                if True in leak_check:
+                    continue
 
             out = [" ".join([t, p, c, pred]) for t, p, c, pred in zip(out_token, out_pos, out_ner, pred)]
             out = "\n".join(out)

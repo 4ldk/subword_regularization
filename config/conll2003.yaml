@@ -13,13 +13,14 @@ device: "cuda"
 model_name: "bert-base-cased"
 stop_word: False
 as_aug: False
-boi1: True
+boi1: False
 
 test: "2003" # 2003, 2023, crossweigh
+leak: non_leak # all, non_leak, only_leak
 
 use_scheduler: False
 warmup_t: 10
 lr_min: 1e-7
 warmup_lr_init: 1e-6
 
-path: "C:/Users/chenr/Desktop/python/subword_regularization/outputs/run/2023-09-22/02-54-41/model/epoch29.pth"
+path: "C:/Users/chenr/Desktop/python/subword_regularization/outputs/train_pred_eval/p3_stop/model/epoch29.pth"
