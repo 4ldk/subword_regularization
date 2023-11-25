@@ -1,5 +1,5 @@
-import sys
 import os
+import sys
 
 from datasets import load_dataset
 from transformers import AutoTokenizer
@@ -9,7 +9,7 @@ from utils.maxMatchTokenizer import MaxMatchTokenizer
 from utils.utils import path_to_data, val_to_key
 
 
-def pred(data):
+def extract(data, all_token_extract=False):
     if data == "train":
         dataset = load_dataset("conll2003")
         test_dataset = dataset["train"]
@@ -52,11 +52,9 @@ def pred(data):
 
     out = {}
     for out_token, out_ner in zip(out_tokens, out_ners):
-
         for tk, ner in zip(out_token, out_ner):
-
             tag = val_to_key(ner, ner_dict)
-            if tag == "O":
+            if tag == "O" and not all_token_extract:
                 continue
             if tk not in out.keys():
                 upper = tk.isupper()
@@ -84,9 +82,10 @@ def pred(data):
             text += ", "
         text += "\n"
 
-    with open("./ne_data.txt", "w", encoding=encoding) as f:
-        f.write(text)
+    return text, encoding
 
 
 if __name__ == "__main__":
-    pred("2003")
+    text, encoding = extract("2003")
+    with open("./ne_data.txt", "w", encoding=encoding) as f:
+        f.write(text)

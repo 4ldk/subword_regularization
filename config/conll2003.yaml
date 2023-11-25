@@ -15,8 +15,7 @@ stop_word: False
 as_aug: False
 boi1: False
 
-test: "2003" # 2003, 2023, crossweigh
-leak: non_leak # all, non_leak, only_leak
+test: "2023" # 2003, 2023, crossweigh
 
 use_scheduler: False
 warmup_t: 10
@@ -24,3 +23,8 @@ lr_min: 1e-7
 warmup_lr_init: 1e-6
 
 path: "C:/Users/chenr/Desktop/python/subword_regularization/outputs/train_pred_eval/p3_stop/model/epoch29.pth"
+leak: all # all, non_leak, non_leak_divided, only_leak
+loop: 30
+pred_p: 0.3
+vote: majority
+only_non_train_split: False

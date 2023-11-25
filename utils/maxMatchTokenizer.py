@@ -7,10 +7,21 @@ from transformers import AutoTokenizer
 
 
 class MaxMatchTokenizer:
-    def __init__(self, vocab=None, midPref="##", headPref="", p=0.0, padding=False, ner_dict=None, stop_word=False):
+    def __init__(
+        self,
+        vocab=None,
+        midPref="##",
+        headPref="",
+        p=0.0,
+        padding=False,
+        ner_dict=None,
+        stop_word=False,
+        trained_tokens=[],
+    ):
         self.midPref = midPref
         self.headPref = headPref
         self.doNaivePreproc = False
+        self.trained_tokens = trained_tokens
         if vocab:
             self.__build(vocab)
 
@@ -30,7 +41,6 @@ class MaxMatchTokenizer:
             9: 9,
         }  # Chage from subword B-xxx label to I-xxx label
         if stop_word:
-
             nltk.download("stopwords")
             self.stop_words = stopwords.words("english")
         self.use_stop_word = stop_word
@@ -50,7 +60,7 @@ class MaxMatchTokenizer:
             self.id2word[self.word2id[w]] = w
 
     # This function corresponds to Algorithm 1 in the paper.
-    def tokenizeWord(self, word, p=False):
+    def tokenizeWord(self, word, p=False, split_first=False):
         p = p if p else self.p
         if self.use_stop_word:
             if word in self.stop_words:
@@ -79,29 +89,49 @@ class MaxMatchTokenizer:
                 # return unk if including unk
                 return [self.unkToken]
             else:
+                if split_first and len(subwords) == 0 and subword == word:
+                    for k in range(1, len(subword)):
+                        if subword[: (len(subword) - k)] in self.vocab:
+                            subword = subword[: (len(subword) - k)]
+                            break
+
                 i += len(subword) - len(self.midPref) if 0 < i else len(subword) - len(self.headPref)
                 subwords.append(subword)
         return subwords
 
-    def tokenize(self, text, p=False):
+    def tokenize(self, text, p=False, non_train_p=False, split_first=False):
         p = p if p else self.p
-        if type(text) == list:
-            return [self.tokenize(line, p) for line in text]
+        if type(text) is list:
+            return [self.tokenize(line, p, non_train_p, split_first=split_first) for line in text]
         if self.doNaivePreproc:
             text = self.naivePreproc(text)
-        subwords = [(i, subword) for i, word in enumerate(text.split()) for subword in self.tokenizeWord(word, p)]
+        if non_train_p:
+            subwords = []
+            for i, word in enumerate(text.split()):
+                if word in self.trained_tokens:
+                    subword = self.tokenizeWord(word, p)
+                else:
+                    subword = self.tokenizeWord(word, non_train_p, split_first)
+
+                for sw in subword:
+                    subwords.append((i, sw))
+
+        else:
+            subwords = [(i, subword) for i, word in enumerate(text.split()) for subword in self.tokenizeWord(word, p, split_first)]
         word_ids = [sw[0] for sw in subwords]
         subwords = [sw[1] for sw in subwords]
         return subwords, word_ids
 
-    def encode(self, text, p=False):
+    def encode(self, text, p=False, non_train_p=False, split_first=False):
         p = p if p else self.p
-        if type(text) == list:
-            subwords = [self.clsTokenId] + [self.word2id[w] for line in text for w in self.tokenize(line, p)[0] + [self.sepToken]]
-            word_ids = [None] + [self.tokenize(line, p)[1] for line in text + [None]]
+        if type(text) is list:
+            subwords = [self.clsTokenId] + [
+                self.word2id[w] for line in text for w in self.tokenize(line, p, non_train_p, split_first)[0] + [self.sepToken]
+            ]
+            word_ids = [None] + [self.tokenize(line, p, non_train_p, split_first)[1] for line in text + [None]]
 
             return subwords, word_ids
-        subwords, word_ids = self.tokenize(text, p)
+        subwords, word_ids = self.tokenize(text, p, non_train_p, split_first)
         subwords = [self.clsTokenId] + [self.word2id[w] for w in subwords] + [self.sepTokenId]
         word_ids = [None] + word_ids + [None]
         if self.padding:
@@ -176,14 +206,22 @@ class MaxMatchTokenizer:
     def naivePreproc(self, text):
         return " ".join(self.bertTokenizer.tokenize(text)).replace(" " + self.midPref, "")
 
-    def dataset_encode(self, data, p=False, return_tensor=True, subword_label="I"):
+    def dataset_encode(
+        self,
+        data,
+        p=False,
+        return_tensor=True,
+        subword_label="I",
+        non_train_p=False,
+        split_first=False,
+    ):
         p = p if p else self.p
         labels, texts = (
             data["labels"],
             data["tokens"],
         )
 
-        tokens = [self.encode(" ".join(text), p=p) for text in texts]
+        tokens = [self.encode(" ".join(text), p=p, non_train_p=non_train_p, split_first=split_first) for text in texts]
         input_ids = [tkns[0] for tkns in tokens]
         word_ids = [tkns[1] for tkns in tokens]
         attention_mask = [tkns[2] for tkns in tokens]

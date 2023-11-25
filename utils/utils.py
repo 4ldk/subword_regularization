@@ -102,7 +102,6 @@ def get_dataloader(data, batch_size, shuffle=True):
 
 
 def key_to_val(key, dic):
-
     return dic[key] if key in dic else dic["UNK"]
 
 
@@ -116,7 +115,6 @@ def val_to_key(val, dic, pad_key="PAD"):
 
 
 def path_to_data(path):
-
     with open(path, "r", encoding="utf-8") as f:
         data = f.read()
     data = data.split("\n\n")
