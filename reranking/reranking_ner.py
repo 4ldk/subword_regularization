@@ -49,7 +49,9 @@ def main():
     consts, randoms, labels = get_dataset_from_100pred("./outputs100/output_2023.txt")
     dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/conll2023.txt")
     dataset = reranking_dataset(dataset["tokens"], randoms, labels, consts=consts)
-    dataset["inputs"] = tokenizer(dataset["Replaced_sentence"], padding="max_length", max_length=512, return_tensors="pt").to("cuda")
+    dataset["inputs"] = tokenizer(
+        dataset["Replaced_sentence"], padding="max_length", max_length=512, return_tensors="pt"
+    ).to("cuda")
     train_dataset = RerankingDataset(dataset)
     train_loader = DataLoader(
         train_dataset,
@@ -62,7 +64,9 @@ def main():
     consts, randoms, labels = get_dataset_from_100pred("./outputs100/output_valid.txt")
     dataset = load_dataset("conll2003")["validation"]
     dataset = reranking_dataset(dataset["tokens"], randoms, labels, consts=consts)
-    dataset["inputs"] = tokenizer(dataset["Replaced_sentence"], padding="max_length", max_length=512, return_tensors="pt").to("cuda")
+    dataset["inputs"] = tokenizer(
+        dataset["Replaced_sentence"], padding="max_length", max_length=512, return_tensors="pt"
+    ).to("cuda")
     eval_dataset = RerankingDataset(dataset)
     eval_loader = DataLoader(
         eval_dataset,
@@ -112,7 +116,9 @@ def main():
                 pred = nn.functional.sigmoid(pred)
                 test_losses.append(criteria(pred.reshape(-1), label).to("cpu").item())
 
-            print(f"Epoch{epoch}: train_loss: {sum(batch_loss) / len(batch_loss)}, test_loss: {sum(test_losses) / len(test_losses)}")
+            print(
+                f"Epoch{epoch}: train_loss: {sum(batch_loss) / len(batch_loss)}, test_loss: {sum(test_losses) / len(test_losses)}"
+            )
 
         s_path = f"{save_path}/epoch{epoch}.pth"
         torch.save(model.state_dict(), s_path)

@@ -18,7 +18,6 @@ if __name__ == "__main__":
             consts.append(line[-1])
     pred_func = round_preds()
     round_prediction = [
-        pred_func.upper_bound(la, ra, const=co, random_num=100)
-        for ra, co, la in zip(randoms, consts, labels)
+        pred_func.upper_bound(la, ra, const=co, random_num=100) for ra, co, la in zip(randoms, consts, labels)
     ]
     print(seqeval.metrics.classification_report([labels], [round_prediction], digits=4))

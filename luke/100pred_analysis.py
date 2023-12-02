@@ -34,8 +34,7 @@ majorities = [pred_func.majority(r, top_k=9, pad="PAD") for r in randoms]
 ratios = [pred_func.get_ratio(r) for r in randoms]
 
 round_prediction = [
-    pred_func.upper_bound(la, ra, const=co, random_num=3)
-    for ra, co, la in zip(majorities, consts, labels)
+    pred_func.upper_bound(la, ra, const=co, random_num=3) for ra, co, la in zip(majorities, consts, labels)
 ]
 # print(seqeval.metrics.classification_report([labels], [round_prediction], digits=4))
 

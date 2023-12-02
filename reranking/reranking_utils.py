@@ -61,9 +61,15 @@ def reranking_dataset(tokens, randoms, labels, consts=None):
             acc = accuracy_score(divided_label, divided_random)
             y = max((acc - 0.8) * 5, 0)
 
-            replaced_tokens = " ".join([tok if d_rand == "O" else d_rand[2:] for tok, d_rand in zip(token, divided_random) if d_rand[0] != "I"])
+            replaced_tokens = " ".join(
+                [tok if d_rand == "O" else d_rand[2:] for tok, d_rand in zip(token, divided_random) if d_rand[0] != "I"]
+            )
 
-            check_dataset = [rep_sent for rep_sent, sent_id in zip(dataset["Replaced_sentence"], dataset["Sentence_id"]) if sent_id == sentence_id]
+            check_dataset = [
+                rep_sent
+                for rep_sent, sent_id in zip(dataset["Replaced_sentence"], dataset["Sentence_id"])
+                if sent_id == sentence_id
+            ]
             if replaced_tokens not in check_dataset:
                 dataset["Sentence"].append(token)
                 dataset["Sentence_id"].append(sentence_id)
@@ -85,9 +91,15 @@ def reranking_dataset(tokens, randoms, labels, consts=None):
             acc = accuracy_score(divided_label, divided_const)
             y = max((acc - 0.8) * 5, 0)
 
-            replaced_tokens = " ".join([tok if d_rand == "O" else d_rand[2:] for tok, d_rand in zip(token, divided_const) if d_rand[0] != "I"])
+            replaced_tokens = " ".join(
+                [tok if d_rand == "O" else d_rand[2:] for tok, d_rand in zip(token, divided_const) if d_rand[0] != "I"]
+            )
 
-            check_dataset = [rep_sent for rep_sent, sent_id in zip(dataset["Replaced_sentence"], dataset["Sentence_id"]) if sent_id == sentence_id]
+            check_dataset = [
+                rep_sent
+                for rep_sent, sent_id in zip(dataset["Replaced_sentence"], dataset["Sentence_id"])
+                if sent_id == sentence_id
+            ]
             if replaced_tokens not in check_dataset:
                 dataset["Sentence"].append(token)
                 dataset["Replaced_sentence"].append(replaced_tokens)
@@ -146,7 +158,11 @@ def sandwich_dataset(tokens, randoms, labels, consts=None):
 
             replaced_tokens = " ".join(replaced_tokens)
 
-            check_dataset = [rep_sent for rep_sent, sent_id in zip(dataset["Replaced_sentence"], dataset["Sentence_id"]) if sent_id == sentence_id]
+            check_dataset = [
+                rep_sent
+                for rep_sent, sent_id in zip(dataset["Replaced_sentence"], dataset["Sentence_id"])
+                if sent_id == sentence_id
+            ]
             if replaced_tokens not in check_dataset:
                 dataset["Sentence"].append(token)
                 dataset["Sentence_id"].append(sentence_id)
@@ -179,7 +195,11 @@ def sandwich_dataset(tokens, randoms, labels, consts=None):
                 pred_label = d_rand
 
             replaced_tokens = " ".join(replaced_tokens)
-            check_dataset = [rep_sent for rep_sent, sent_id in zip(dataset["Replaced_sentence"], dataset["Sentence_id"]) if sent_id == sentence_id]
+            check_dataset = [
+                rep_sent
+                for rep_sent, sent_id in zip(dataset["Replaced_sentence"], dataset["Sentence_id"])
+                if sent_id == sentence_id
+            ]
             if replaced_tokens not in check_dataset:
                 dataset["Sentence"].append(token)
                 dataset["Replaced_sentence"].append(replaced_tokens)

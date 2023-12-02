@@ -117,7 +117,11 @@ class MaxMatchTokenizer:
                     subwords.append((i, sw))
 
         else:
-            subwords = [(i, subword) for i, word in enumerate(text.split()) for subword in self.tokenizeWord(word, p, split_first)]
+            subwords = [
+                (i, subword)
+                for i, word in enumerate(text.split())
+                for subword in self.tokenizeWord(word, p, split_first)
+            ]
         word_ids = [sw[0] for sw in subwords]
         subwords = [sw[1] for sw in subwords]
         return subwords, word_ids
@@ -126,7 +130,9 @@ class MaxMatchTokenizer:
         p = p if p else self.p
         if type(text) is list:
             subwords = [self.clsTokenId] + [
-                self.word2id[w] for line in text for w in self.tokenize(line, p, non_train_p, split_first)[0] + [self.sepToken]
+                self.word2id[w]
+                for line in text
+                for w in self.tokenize(line, p, non_train_p, split_first)[0] + [self.sepToken]
             ]
             word_ids = [None] + [self.tokenize(line, p, non_train_p, split_first)[1] for line in text + [None]]
 

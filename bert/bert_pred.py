@@ -154,7 +154,9 @@ def pred(length, path, test, leak):
     output = []
     model.eval()
     with torch.no_grad():
-        for input, sub_input, label, out_token, out_pos, out_ner in zip(tqdm(inputs), attention_mask, labels, out_tokens, out_poses, out_ners):
+        for input, sub_input, label, out_token, out_pos, out_ner in zip(
+            tqdm(inputs), attention_mask, labels, out_tokens, out_poses, out_ners
+        ):
             if leak == "non_leak":
                 leak_check = [t not in trained_tokens for t in out_token]
 
@@ -189,7 +191,11 @@ def pred(length, path, test, leak):
                 if leak in ["non_leak", "non_leak_divided", "only_leak"]
                 else [True] * len(pred)
             )
-            out = [" ".join([t, p, c, pred]) for t, p, c, pred, o_c in zip(out_token, out_pos, out_ner, pred, out_check) if o_c]
+            out = [
+                " ".join([t, p, c, pred])
+                for t, p, c, pred, o_c in zip(out_token, out_pos, out_ner, pred, out_check)
+                if o_c
+            ]
             if len(out) != 0:
                 out = "\n".join(out)
                 output.append(out)

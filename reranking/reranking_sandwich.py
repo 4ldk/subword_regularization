@@ -48,9 +48,7 @@ def main():
     )
 
     consts, randoms, labels = get_dataset_from_100pred("./outputs100/output_2023.txt")
-    dataset = path_to_data(
-        "C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/conll2023.txt"
-    )
+    dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/conll2023.txt")
     dataset = sandwich_dataset(dataset["tokens"], randoms, labels, consts=consts)
     dataset["inputs"] = tokenizer.batch_encode_plus(
         dataset["Replaced_sentence"],
@@ -85,9 +83,7 @@ def main():
         load_best_model_at_end=True,
     )
 
-    model = AutoModelForSequenceClassification.from_pretrained(
-        model_name, num_labels=1, ignore_mismatched_sizes=True
-    )
+    model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=1, ignore_mismatched_sizes=True)
     model.resize_token_embeddings(len(tokenizer))
     print("Made model")
 

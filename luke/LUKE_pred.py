@@ -14,16 +14,12 @@ torch.manual_seed(42)
 torch.cuda.manual_seed_all(42)
 torch.backends.cudnn.deterministic = True
 # Load the model checkpoint
-model = LukeForEntitySpanClassification.from_pretrained(
-    "studio-ousia/luke-large-finetuned-conll-2003"
-)
+model = LukeForEntitySpanClassification.from_pretrained("studio-ousia/luke-large-finetuned-conll-2003")
 model.eval()
 model.to("cuda")
 
 # Load the tokenizer
-tokenizer = LukeTokenizerDropout.from_pretrained(
-    "studio-ousia/luke-large-finetuned-conll-2003", alpha=0.1
-)
+tokenizer = LukeTokenizerDropout.from_pretrained("studio-ousia/luke-large-finetuned-conll-2003", alpha=0.1)
 
 
 def load_documents(dataset_file):
@@ -57,9 +53,7 @@ def load_documents(dataset_file):
                 labels.append(items[-1])
 
     if words:
-        documents.append(
-            dict(words=words, labels=labels, sentence_boundaries=sentence_boundaries)
-        )
+        documents.append(dict(words=words, labels=labels, sentence_boundaries=sentence_boundaries))
 
     return documents
 
@@ -91,19 +85,13 @@ def load_examples(documents, max_token_length=510):
                 cur_length = sum(subword_lengths[context_start:context_end])
                 while True:
                     if context_start > 0:
-                        if (
-                            cur_length + subword_lengths[context_start - 1]
-                            <= max_token_length
-                        ):
+                        if cur_length + subword_lengths[context_start - 1] <= max_token_length:
                             cur_length += subword_lengths[context_start - 1]
                             context_start -= 1
                         else:
                             break
                     if context_end < len(words):
-                        if (
-                            cur_length + subword_lengths[context_end]
-                            <= max_token_length
-                        ):
+                        if cur_length + subword_lengths[context_end] <= max_token_length:
                             cur_length += subword_lengths[context_end]
                             context_end += 1
                         else:
@@ -140,10 +128,7 @@ def load_examples(documents, max_token_length=510):
             original_word_spans = []
             for word_start in range(len(sentence_words)):
                 for word_end in range(word_start, len(sentence_words)):
-                    if (
-                        sum(sentence_subword_lengths[word_start : word_end + 1])
-                        <= max_mention_length
-                    ):
+                    if sum(sentence_subword_lengths[word_start : word_end + 1]) <= max_mention_length:
                         entity_spans.append(
                             (
                                 word_start_char_positions[word_start],
@@ -166,12 +151,7 @@ def load_examples(documents, max_token_length=510):
 
 def is_punctuation(char):
     cp = ord(char)
-    if (
-        (cp >= 33 and cp <= 47)
-        or (cp >= 58 and cp <= 64)
-        or (cp >= 91 and cp <= 96)
-        or (cp >= 123 and cp <= 126)
-    ):
+    if (cp >= 33 and cp <= 47) or (cp >= 58 and cp <= 64) or (cp >= 91 and cp <= 96) or (cp >= 123 and cp <= 126):
         return True
     cat = unicodedata.category(char)
     if cat.startswith("P"):
@@ -179,9 +159,7 @@ def is_punctuation(char):
     return False
 
 
-test_documents = load_documents(
-    "C:\\Users\\chenr\\Desktop\\python\\subword_regularization\\eng.testa"
-)
+test_documents = load_documents("C:\\Users\\chenr\\Desktop\\python\\subword_regularization\\eng.testa")
 test_examples = load_examples(test_documents, 410)
 tokenizer.random_tokenize()
 
@@ -189,9 +167,7 @@ round_prediction = []
 num_round = 1
 for i in range(num_round):
     if i == num_round - 1:
-        test_documents = load_documents(
-            "C:\\Users\\chenr\\Desktop\\python\\subword_regularization\\eng.testa"
-        )
+        test_documents = load_documents("C:\\Users\\chenr\\Desktop\\python\\subword_regularization\\eng.testa")
         test_examples = load_examples(test_documents, 510)
         tokenizer.const_tokenize()
     batch_size = 2
@@ -203,9 +179,7 @@ for i in range(num_round):
         entity_spans = [example["entity_spans"] for example in batch_examples]
 
         while True:
-            inputs = tokenizer(
-                texts, entity_spans=entity_spans, return_tensors="pt", padding=True
-            )
+            inputs = tokenizer(texts, entity_spans=entity_spans, return_tensors="pt", padding=True)
 
             if inputs["input_ids"].shape[-1] <= 512:
                 break
@@ -215,9 +189,7 @@ for i in range(num_round):
             outputs = model(**inputs)
         all_logits.extend(outputs.logits.tolist())
 
-    final_labels = [
-        label for document in test_documents for label in document["labels"]
-    ]
+    final_labels = [label for document in test_documents for label in document["labels"]]
 
     final_predictions = []
     for example_index, example in enumerate(test_examples):
@@ -236,9 +208,7 @@ for i in range(num_round):
             if all([o == "O" for o in predicted_sequence[span[0] : span[1]]]):
                 predicted_sequence[span[0]] = "B-" + label
                 if span[1] - span[0] > 1:
-                    predicted_sequence[span[0] + 1 : span[1]] = ["I-" + label] * (
-                        span[1] - span[0] - 1
-                    )
+                    predicted_sequence[span[0] + 1 : span[1]] = ["I-" + label] * (span[1] - span[0] - 1)
 
         final_predictions += predicted_sequence
     round_prediction.append(final_predictions)
@@ -262,15 +232,9 @@ def upper_bound(label, preds):
 
 path = "./output_valid.txt"
 with open(path, "w") as f_out:
-    pred = "\n".join(
-        f_l + " " + " ".join(r_p) for r_p, f_l in zip(round_prediction, final_labels)
-    )
+    pred = "\n".join(f_l + " " + " ".join(r_p) for r_p, f_l in zip(round_prediction, final_labels))
     f_out.write(pred)
 
-round_prediction = [
-    upper_bound(f_l, r_p) for r_p, f_l in zip(round_prediction, final_labels)
-]
+round_prediction = [upper_bound(f_l, r_p) for r_p, f_l in zip(round_prediction, final_labels)]
 
-print(
-    seqeval.metrics.classification_report([final_labels], [round_prediction], digits=4)
-)
+print(seqeval.metrics.classification_report([final_labels], [round_prediction], digits=4))

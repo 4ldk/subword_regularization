@@ -215,9 +215,7 @@ def get_result(
     print("accuracy: %6.2f%%; (non-O)" % (100 * nonO_correct_counts / nonO_true_counts))
     print("accuracy: %6.2f%%; " % (100 * sum_correct_counts / sum_true_counts), end="")
     print("precision: %6.2f%%; recall: %6.2f%%; FB1: %6.2f" % (prec, rec, f1))
-    out_text += (
-        f"accuracy: {(100 * nonO_correct_counts / nonO_true_counts)}%; (non-O)\n"
-    )
+    out_text += f"accuracy: {(100 * nonO_correct_counts / nonO_true_counts)}%; (non-O)\n"
     out_text += f"accuracy: {(100 * sum_correct_counts / sum_true_counts)}%;"
     out_text += f"precision: {prec}%; recall: {rec}%; FB1: {f1}\n"
 
@@ -225,13 +223,9 @@ def get_result(
     for t in chunk_types:
         prec, rec, f1 = calc_metrics(correct_chunks[t], pred_chunks[t], true_chunks[t])
         print("%17s: " % t, end="")
-        print(
-            "precision: %6.2f%%; recall: %6.2f%%; FB1: %6.2f" % (prec, rec, f1), end=""
-        )
+        print("precision: %6.2f%%; recall: %6.2f%%; FB1: %6.2f" % (prec, rec, f1), end="")
         print("  %d" % pred_chunks[t])
-        out_text += (
-            f"{t}: precision: {prec}; recall: {rec}; FB1: {f1} {pred_chunks[t]}\n"
-        )
+        out_text += f"{t}: precision: {prec}; recall: {rec}; FB1: {f1} {pred_chunks[t]}\n"
 
     with open("./eval_score.txt", "w") as f:
         f.write(out_text)

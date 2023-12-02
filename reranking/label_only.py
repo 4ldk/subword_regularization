@@ -133,7 +133,9 @@ def crf_dataset(dataset, df):
 
 def crf_train(df, dataset):
     df_x, df_y, df_new_y = crf_dataset(dataset, df)
-    train_x, val_x, train_y, val_y, train_new_y, val_new_y = train_test_split(df_x, df_y, df_new_y, test_size=0.2, shuffle=False)
+    train_x, val_x, train_y, val_y, train_new_y, val_new_y = train_test_split(
+        df_x, df_y, df_new_y, test_size=0.2, shuffle=False
+    )
 
     crf = sklearn_crfsuite.CRF(
         algorithm="lbfgs",

@@ -13,9 +13,7 @@ from utils.utils import path_to_data
 
 def main():
     consts, randoms, labels = get_dataset_from_100pred("./outputs100/output_2023.txt")
-    dataset = path_to_data(
-        "C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/conll2023.txt"
-    )
+    dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/conll2023.txt")
     # dataset = load_dataset("conll2003")["test"]
     dataset = reranking_dataset(dataset["tokens"], randoms, labels, consts=consts)
 
@@ -44,11 +42,7 @@ def main():
         predicted_labels += final_pred
         golden_labels += p["Golden_label"]
 
-    print(
-        seqeval.metrics.classification_report(
-            [golden_labels], [predicted_labels], digits=4
-        )
-    )
+    print(seqeval.metrics.classification_report([golden_labels], [predicted_labels], digits=4))
 
 
 if __name__ == "__main__":

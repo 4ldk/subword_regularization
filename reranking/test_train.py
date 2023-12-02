@@ -97,7 +97,9 @@ def main():
     )
     print("Made eval dataset")
 
-    model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=1, ignore_mismatched_sizes=True).to("cuda")
+    model = AutoModelForSequenceClassification.from_pretrained(
+        model_name, num_labels=1, ignore_mismatched_sizes=True
+    ).to("cuda")
     print("Made model")
 
     optimizer = optim.Adam(

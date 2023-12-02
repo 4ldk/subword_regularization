@@ -173,7 +173,9 @@ def pred(mmt, test_data, test_dataset, model, device="cuda", p=0, non_train=Fals
 
     output = []
     with torch.no_grad():
-        for input, sub_input, label, out_token, out_pos, out_ner in zip(inputs, attention_mask, labels, out_tokens, out_poses, out_ners):
+        for input, sub_input, label, out_token, out_pos, out_ner in zip(
+            inputs, attention_mask, labels, out_tokens, out_poses, out_ners
+        ):
             input, sub_input, label = (
                 input.to(device),
                 sub_input.to(device),
