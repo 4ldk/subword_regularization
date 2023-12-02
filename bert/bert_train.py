@@ -13,7 +13,8 @@ from transformers import AutoModelForTokenClassification, AutoTokenizer
 from utils.boi_convert import boi2_to_1
 from utils.datamodule import BertCRF
 from utils.maxMatchTokenizer import MaxMatchTokenizer
-from utils.utils import CosineScheduler, f1_score, get_dataloader, get_texts_and_labels
+from utils.utils import (CosineScheduler, f1_score, get_dataloader,
+                         get_texts_and_labels)
 
 
 @hydra.main(config_path="../config", config_name="conll2003", version_base="1.1")

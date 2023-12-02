@@ -1,14 +1,13 @@
-import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-from datasets import load_dataset
-from torch.utils.data import Dataset
-from sklearn.metrics import accuracy_score
-from tqdm import tqdm
 import shutil
-from torch import optim
+
 import numpy as np
-from torch.utils.data import DataLoader
-from torch import nn
+import torch
+from datasets import load_dataset
+from sklearn.metrics import accuracy_score
+from torch import nn, optim
+from torch.utils.data import DataLoader, Dataset
+from tqdm import tqdm
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 
 class MyDataset(Dataset):

@@ -1,20 +1,15 @@
 import os
 import random
 import sys
+
 import numpy as np
 import torch
-from transformers import (
-    AutoTokenizer,
-    AutoModelForSequenceClassification,
-    TrainingArguments,
-    Trainer,
-)
 from datasets import load_dataset
-from reranking_utils import (
-    RerankingDataset,
-    sandwich_dataset,
-    get_dataset_from_100pred,
-)
+from reranking_utils import RerankingDataset, get_dataset_from_100pred, sandwich_dataset
+from torch import nn, optim
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils.utils import path_to_data
@@ -38,8 +33,11 @@ tags = {
 
 
 def main():
-    save_path = "./outputs/reranking/sand_model_base_normal"
-    model_name = "bert-base-cased"  # "dslim/bert-large-NER" "Jean-Baptiste/roberta-large-ner-english"
+    save_path = "./outputs/reranking/sand_model_large_ner"
+    model_name = "Jean-Baptiste/roberta-large-ner-english"  # "dslim/bert-large-NER"
+    lr = 3e-5
+    batch_size = 4
+    epochs = 10
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.add_tokens(
@@ -50,52 +48,80 @@ def main():
     consts, randoms, labels = get_dataset_from_100pred("./outputs100/output_2023.txt")
     dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/conll2023.txt")
     dataset = sandwich_dataset(dataset["tokens"], randoms, labels, consts=consts)
-    dataset["inputs"] = tokenizer.batch_encode_plus(
-        dataset["Replaced_sentence"],
-        padding="max_length",
-        max_length=512,
-        return_tensors="pt",
-    )
+    dataset["inputs"] = tokenizer(
+        dataset["Replaced_sentence"], padding="max_length", max_length=512, return_tensors="pt"
+    ).to("cuda")
     train_dataset = RerankingDataset(dataset)
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        drop_last=True,
+    )
     print("Made train dataset")
 
     consts, randoms, labels = get_dataset_from_100pred("./outputs100/output_valid.txt")
     dataset = load_dataset("conll2003")["validation"]
     dataset = sandwich_dataset(dataset["tokens"], randoms, labels, consts=consts)
-    dataset["inputs"] = tokenizer.batch_encode_plus(
-        dataset["Replaced_sentence"],
-        padding="max_length",
-        max_length=512,
-        return_tensors="pt",
-    )
+    dataset["inputs"] = tokenizer(
+        dataset["Replaced_sentence"], padding="max_length", max_length=512, return_tensors="pt"
+    ).to("cuda")
     eval_dataset = RerankingDataset(dataset)
-    print("Made eval dataset")
-
-    training_args = TrainingArguments(
-        output_dir=save_path,
-        learning_rate=5e-3,
-        per_device_train_batch_size=4,
-        per_device_eval_batch_size=4,
-        num_train_epochs=20,
-        logging_strategy="epoch",
-        evaluation_strategy="epoch",
-        save_strategy="epoch",
-        load_best_model_at_end=True,
+    eval_loader = DataLoader(
+        eval_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        drop_last=True,
     )
+    print("Made eval dataset")
 
     model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=1, ignore_mismatched_sizes=True)
     model.resize_token_embeddings(len(tokenizer))
+    model = model.to("cuda")
     print("Made model")
 
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_dataset,
-        eval_dataset=eval_dataset,
+    optimizer = optim.Adam(
+        model.parameters(),
+        lr=lr,
+        betas=(0.9, 0.999),
+        amsgrad=True,
     )
+    criteria = nn.MSELoss()
+    losses = []
+    for epoch in range(epochs):
+        model.train()
+        train_bar = tqdm(train_loader, leave=False, desc=f"Epoch{epoch} ")
+        batch_loss = []
+        for inputs, label in train_bar:
+            label = label.to("cuda")
+            pred = model.forward(**inputs)["logits"]
+            pred = nn.functional.sigmoid(pred)
+            loss = criteria(pred.reshape(-1), label)
 
-    trainer.train()
-    model.save_pretrained(save_path)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            train_bar.set_postfix(loss=loss.to("cpu").item())
+            batch_loss.append(loss.to("cpu").item())
+
+        losses.append(sum(batch_loss) / len(batch_loss))
+
+        model.eval()
+        test_losses = []
+        with torch.no_grad():
+            for inputs, label in tqdm(eval_loader, leave=False):
+                label = label.to("cuda")
+                pred = model.forward(**inputs)["logits"]
+                pred = nn.functional.sigmoid(pred)
+                test_losses.append(criteria(pred.reshape(-1), label).to("cpu").item())
+
+            print(
+                f"Epoch{epoch}: train_loss: {sum(batch_loss) / len(batch_loss)}, test_loss: {sum(test_losses) / len(test_losses)}"
+            )
+
+        s_path = f"{save_path}/epoch{epoch}.pth"
+        torch.save(model.state_dict(), s_path)
 
 
 if __name__ == "__main__":

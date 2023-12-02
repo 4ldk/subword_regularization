@@ -2,9 +2,9 @@ import os
 import sys
 
 import numpy as np
-from datasets import load_dataset
 import seqeval.metrics
-from reranking_utils import reranking_dataset, get_dataset_from_100pred
+from datasets import load_dataset
+from reranking_utils import get_dataset_from_100pred, reranking_dataset
 from sklearn.metrics import accuracy_score
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))

@@ -6,7 +6,8 @@ import torch
 from datasets import load_dataset
 from round_table import round_table
 from tqdm import tqdm
-from transformers import AutoModelForTokenClassification, AutoTokenizer, BertConfig
+from transformers import (AutoModelForTokenClassification, AutoTokenizer,
+                          BertConfig)
 
 from tools.ne_extracter import extract
 from utils.datamodule import BertCRF

@@ -1,18 +1,17 @@
 import os
 import random
 import sys
-from tqdm.contrib import tzip
 
 import numpy as np
-from datasets import load_dataset
-import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import seqeval.metrics
-from reranking_utils import reranking_dataset, get_dataset_from_100pred
+import torch
+from datasets import load_dataset
+from reranking_utils import get_dataset_from_100pred, reranking_dataset
+from tqdm.contrib import tzip
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils.utils import path_to_data
-
 
 random.seed(42)
 np.random.seed(42)

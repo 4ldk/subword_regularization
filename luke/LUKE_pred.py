@@ -5,9 +5,9 @@ import numpy as np
 import pandas as pd
 import seqeval.metrics
 import torch
+from bpe_dropout import LukeTokenizerDropout
 from tqdm import tqdm, trange
 from transformers import LukeForEntitySpanClassification
-from bpe_dropout import LukeTokenizerDropout
 
 np.random.seed(42)
 torch.manual_seed(42)

@@ -1,19 +1,15 @@
 import os
 import random
 import sys
+
 import numpy as np
 import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from datasets import load_dataset
-from reranking_utils import (
-    RerankingDataset,
-    reranking_dataset,
-    get_dataset_from_100pred,
-)
-from torch import optim
+from reranking_utils import RerankingDataset, get_dataset_from_100pred, reranking_dataset
+from torch import nn, optim
 from torch.utils.data import DataLoader
-from torch import nn
 from tqdm import tqdm
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils.utils import path_to_data
