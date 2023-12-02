@@ -1,13 +1,13 @@
 import os
 import random
 import sys
+from tqdm.contrib import tzip
 
 import numpy as np
 from datasets import load_dataset
 import torch
-from transformers import AutoTokenizer, BertForSequenceClassification
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import seqeval.metrics
-from transformers import pipeline
 from reranking_utils import reranking_dataset, get_dataset_from_100pred
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
@@ -33,31 +33,43 @@ tags = {
 
 
 def main():
-    model_path = "./outputs/reranking/model_large/checkpoint-14980"
+    model_path = "./outputs/reranking/model_base_ner/epoch2.pth"
+    model_name = "dslim/bert-base-NER"
 
-    consts, randoms, labels = get_dataset_from_100pred("./outputs100/output_valid.txt")
+    consts, randoms, labels = get_dataset_from_100pred("./outputs100/output_test.txt")
     # dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/conll2023.txt")
-    dataset = load_dataset("conll2003")["validation"]
+    dataset = load_dataset("conll2003")["test"]
     dataset = reranking_dataset(dataset["tokens"], randoms, labels, consts=consts)
-    tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
-    tokenizer.add_tokens(["PER", "ORG", "LOC", "MISC"], special_tokens=True)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer.add_tokens(["<PER>", "<ORG>", "<LOC>", "<MISC>"], special_tokens=True)
 
-    model = BertForSequenceClassification.from_pretrained(model_path, num_labels=1, local_files_only=True)
-    sentiment_analyzer = pipeline("sentiment-analysis", model=model, tokenizer=tokenizer)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=1, ignore_mismatched_sizes=True)
+    model.resize_token_embeddings(len(tokenizer))
+    model.load_state_dict(torch.load(model_path))
+    model = model.to("cuda")
+    model = model.eval()
     print("Made model")
 
     pred = {}
     predicted_labels = []
     golden_labels = []
-
-    for sentence_id, inputs, predicted_label, golden_label in zip(
-        dataset["Sentence_id"], dataset["Replaced_sentence"], dataset["Predicted_label"], dataset["Golden_label"]
-    ):
-        if sentence_id not in pred.keys():
-            pred[sentence_id] = {"Golden_label": golden_label, "prob": [], "Predicted_label": []}
-        prob = sentiment_analyzer(inputs)[0]["score"]
-        pred[sentence_id]["prob"].append(prob)
-        pred[sentence_id]["Predicted_label"].append(predicted_label)
+    with torch.inference_mode():
+        for sentence_id, inputs, predicted_label, golden_label in tzip(
+            dataset["Sentence_id"],
+            dataset["Replaced_sentence"],
+            dataset["Predicted_label"],
+            dataset["Golden_label"],
+        ):
+            if sentence_id not in pred.keys():
+                pred[sentence_id] = {
+                    "Golden_label": golden_label,
+                    "prob": [],
+                    "Predicted_label": [],
+                }
+            inputs = tokenizer(inputs, return_tensors="pt").to("cuda")
+            prob = model(**inputs)["logits"].reshape(-1).tolist()[0]
+            pred[sentence_id]["prob"].append(prob)
+            pred[sentence_id]["Predicted_label"].append(predicted_label)
 
     for p in pred.values():
         max_prob_index = np.argmax(np.array(p["prob"]))
