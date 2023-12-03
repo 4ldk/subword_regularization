@@ -1,17 +1,12 @@
-import os
 import random
-import sys
 
 import numpy as np
 import seqeval.metrics
 import torch
-from datasets import load_dataset
-from reranking_utils import get_dataset_from_100pred, reranking_dataset
 from tqdm.contrib import tzip
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
+from reranking_utils import get_dataset
 
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from utils.utils import path_to_data
 
 random.seed(42)
 np.random.seed(42)
@@ -34,13 +29,11 @@ tags = {
 def main():
     model_path = "./outputs/reranking/model_base_ner/epoch2.pth"
     model_name = "dslim/bert-base-NER"
+    test_dataset = "test"
+    sandwich = True
 
-    consts, randoms, labels = get_dataset_from_100pred("./outputs100/output_test.txt")
-    # dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/conll2023.txt")
-    dataset = load_dataset("conll2003")["test"]
-    dataset = reranking_dataset(dataset["tokens"], randoms, labels, consts=consts)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    tokenizer.add_tokens(["<PER>", "<ORG>", "<LOC>", "<MISC>"], special_tokens=True)
+    dataset, tokenizer = get_dataset(test_dataset, tokenizer, sandwich=sandwich)
 
     model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=1, ignore_mismatched_sizes=True)
     model.resize_token_embeddings(len(tokenizer))
