@@ -27,10 +27,11 @@ tags = {
 
 
 def main():
-    model_path = "./outputs/reranking/model_base_ner/epoch2.pth"
-    model_name = "dslim/bert-base-NER"
+    model_path = "./outputs/reranking/sand_model_large_ner/epoch9.pth"
+    model_name = "Jean-Baptiste/roberta-large-ner-english"
     test_dataset = "test"
     sandwich = True
+    alpha = 1e-5
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     dataset, tokenizer = get_dataset(test_dataset, tokenizer, sandwich=sandwich)
@@ -46,11 +47,12 @@ def main():
     predicted_labels = []
     golden_labels = []
     with torch.inference_mode():
-        for sentence_id, inputs, predicted_label, golden_label in tzip(
+        for sentence_id, inputs, predicted_label, golden_label, rate in tzip(
             dataset["Sentence_id"],
             dataset["Replaced_sentence"],
             dataset["Predicted_label"],
             dataset["Golden_label"],
+            dataset["rate"],
         ):
             if sentence_id not in pred.keys():
                 pred[sentence_id] = {
@@ -60,7 +62,7 @@ def main():
                 }
             inputs = tokenizer(inputs, return_tensors="pt").to("cuda")
             prob = model(**inputs)["logits"].reshape(-1).tolist()[0]
-            pred[sentence_id]["prob"].append(prob)
+            pred[sentence_id]["prob"].append(prob * (rate**alpha))
             pred[sentence_id]["Predicted_label"].append(predicted_label)
 
     for p in pred.values():

@@ -5,6 +5,7 @@ from torch.utils.data import Dataset
 import sys
 import os
 from datasets import load_dataset
+import pickle
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils.utils import path_to_data
@@ -56,11 +57,14 @@ def reranking_dataset(tokens, randoms, labels, consts=None):
         "Predicted_label": [],
         "Golden_label": [],
         "y": [],
+        "rate": [],
     }
     for rand in randoms:
         pred_pos = 0
+        skip_num = 0
         for sentence_id, token in enumerate(tokens):
             if len(token) == 0:
+                skip_num += 1
                 continue
             divided_random = rand[pred_pos : pred_pos + len(token)]
             divided_label = labels[pred_pos : pred_pos + len(token)]
@@ -84,10 +88,16 @@ def reranking_dataset(tokens, randoms, labels, consts=None):
                 dataset["Predicted_label"].append(divided_random)
                 dataset["Golden_label"].append(divided_label)
                 dataset["y"].append(y)
+                dataset["rate"].append(1 / 100)
+
+            else:
+                same_sentence_index = dataset["Replaced_sentence"].index(replaced_tokens)
+                dataset["rate"][same_sentence_index] += 1 / 100
 
             pred_pos += len(token)
 
     if consts is not None:
+        dataset["consts"] = []
         pred_pos = 0
         for sentence_id, token in enumerate(tokens):
             if len(token) == 0:
@@ -109,10 +119,13 @@ def reranking_dataset(tokens, randoms, labels, consts=None):
             ]
             if replaced_tokens not in check_dataset:
                 dataset["Sentence"].append(token)
+                dataset["Sentence_id"].append(sentence_id)
                 dataset["Replaced_sentence"].append(replaced_tokens)
                 dataset["Predicted_label"].append(divided_const)
                 dataset["Golden_label"].append(divided_label)
                 dataset["y"].append(y)
+                dataset["rate"].append(0)
+            dataset["consts"].append(divided_const)
             pred_pos += len(token)
     return dataset
 
@@ -141,6 +154,7 @@ def sandwich_dataset(tokens, randoms, labels, consts=None):
         "Predicted_label": [],
         "Golden_label": [],
         "y": [],
+        "rate": [],
     }
     for rand in randoms:
         pred_pos = 0
@@ -177,10 +191,15 @@ def sandwich_dataset(tokens, randoms, labels, consts=None):
                 dataset["Predicted_label"].append(divided_random)
                 dataset["Golden_label"].append(divided_label)
                 dataset["y"].append(y)
+                dataset["rate"].append(1 / 100)
 
+            else:
+                same_sentence_index = dataset["Replaced_sentence"].index(replaced_tokens)
+                dataset["rate"][same_sentence_index] += 1 / 100
             pred_pos += len(token)
 
     if consts is not None:
+        dataset["consts"] = []
         pred_pos = 0
         for sentence_id, token in enumerate(tokens):
             if len(token) == 0:
@@ -209,10 +228,13 @@ def sandwich_dataset(tokens, randoms, labels, consts=None):
             ]
             if replaced_tokens not in check_dataset:
                 dataset["Sentence"].append(token)
+                dataset["Sentence_id"].append(sentence_id)
                 dataset["Replaced_sentence"].append(replaced_tokens)
                 dataset["Predicted_label"].append(divided_const)
                 dataset["Golden_label"].append(divided_label)
                 dataset["y"].append(y)
+                dataset["rate"].append(0)
+            dataset["consts"].append(divided_const)
             pred_pos += len(token)
     return dataset
 
@@ -257,3 +279,23 @@ def get_dataset(dataset_names, tokenizer, sandwich=False):
     else:
         dataset = reranking_dataset(dataset["tokens"], randoms, labels, consts=consts)
     return dataset, tokenizer
+
+
+def save_dataset():
+    consts, randoms, labels = get_dataset_from_100pred("./outputs100/output_test.txt")
+    dataset_test = load_dataset("conll2003")["test"]
+    dataset_test = reranking_dataset(dataset_test["tokens"], randoms, labels, consts=consts)
+
+    consts, randoms, labels = get_dataset_from_100pred("./outputs100/output_2023.txt")
+    dataset_100 = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/conll2023.txt")
+    dataset_100 = reranking_dataset(dataset_100["tokens"], randoms, labels, consts=consts)
+
+    consts, randoms, labels = get_dataset_from_100pred("./outputs100/output_valid.txt")
+    dataset_valid = load_dataset("conll2003")["validation"]
+    dataset_valid = reranking_dataset(dataset_valid["tokens"], randoms, labels, consts=consts)
+    with open("./output100/dataset_test.pkl", mode="wb") as f:
+        pickle.dump(dataset_test, f)
+    with open("./output100/dataset_100.pkl", mode="wb") as f:
+        pickle.dump(dataset_100, f)
+    with open("./output100/dataset_valid.pkl", mode="wb") as f:
+        pickle.dump(dataset_valid, f)
