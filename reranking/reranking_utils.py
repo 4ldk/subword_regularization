@@ -285,17 +285,17 @@ def save_dataset():
     consts, randoms, labels = get_dataset_from_100pred("./outputs100/output_test.txt")
     dataset_test = load_dataset("conll2003")["test"]
     dataset_test = reranking_dataset(dataset_test["tokens"], randoms, labels, consts=consts)
-
+    with open("./outputs100/dataset_test.pkl", mode="wb") as f_t:
+        pickle.dump(dataset_test, f_t)
+    exit()
     consts, randoms, labels = get_dataset_from_100pred("./outputs100/output_2023.txt")
     dataset_100 = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/conll2023.txt")
     dataset_100 = reranking_dataset(dataset_100["tokens"], randoms, labels, consts=consts)
+    with open("./outputs100/dataset_2023.pkl", mode="wb") as f_1:
+        pickle.dump(dataset_100, f_1)
 
     consts, randoms, labels = get_dataset_from_100pred("./outputs100/output_valid.txt")
     dataset_valid = load_dataset("conll2003")["validation"]
     dataset_valid = reranking_dataset(dataset_valid["tokens"], randoms, labels, consts=consts)
-    with open("./output100/dataset_test.pkl", mode="wb") as f:
-        pickle.dump(dataset_test, f)
-    with open("./output100/dataset_100.pkl", mode="wb") as f:
-        pickle.dump(dataset_100, f)
-    with open("./output100/dataset_valid.pkl", mode="wb") as f:
-        pickle.dump(dataset_valid, f)
+    with open("./outputs100/dataset_valid.pkl", mode="wb") as f_v:
+        pickle.dump(dataset_valid, f_v)

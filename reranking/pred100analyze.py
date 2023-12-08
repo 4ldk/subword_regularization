@@ -6,13 +6,15 @@ import matplotlib.pyplot as plt
 
 
 def main():
-    use_datasets = ["test", "valid", "2023"]  # ["test","2023","valid"]
+    use_datasets = ["test"]  # ["test","2023","valid"]
     max_num = 100
+    zero_division = "skip"  # 0, 1, skip
     dataset_list = []
 
     for u_d in use_datasets:
-        with open(f"./output100/dataset_{u_d}.pkl", mode="wb") as f:
-            dataset_list.append(pickle.load(f))
+        with open(f"./outputs100/dataset_{u_d}.pkl", mode="rb") as f:
+            dataset = pickle.load(f)
+        dataset_list.append(dataset)
 
     dataset = dataset_list[0]
 
@@ -28,17 +30,28 @@ def main():
 
     f1_for_length = []
     length = []
+    skip_num = 0
     for sentence_id, golden_label in zip(
         dataset["Sentence_id"],
         dataset["Golden_label"],
     ):
         if sentence_id not in pred.keys():
-            f1 = seqeval.metrics.f1_score([golden_label], [dataset["consts"][sentence_id]], zero_division=0)
+            if (
+                zero_division == "skip"
+                and len(set(golden_label)) == 1
+                and golden_label[0] == "O"
+                and len(set(dataset["consts"][sentence_id])) == 1
+                and dataset["consts"][sentence_id][0] == "O"
+            ):
+                skip_num += 1
+                continue
+            f1 = seqeval.metrics.f1_score([golden_label], [dataset["consts"][sentence_id]], zero_division=zero_division)
             pred[sentence_id] = [f1, 0]
             f1_for_length.append(f1)
             length.append(len(golden_label))
         pred[sentence_id][1] += 1
 
+    print("skip num is ", skip_num)
     pred = list(pred.values())
     pred = sorted(pred, key=lambda x: x[1])
     pre_num = 0
@@ -70,7 +83,13 @@ def main():
 
     plt.show()
 
-    plt.scatter(length, f1_for_length)
+    length = np.array(length)
+    f1_for_length = np.array(f1_for_length)
+    plt.scatter(length, f1_for_length, s=4)
+    a, b = np.polyfit(length, f1_for_length, 1)
+    # フィッティング直線
+    y2 = a * length + b
+    plt.plot(length, y2, color="k")
     plt.show()
 
 
