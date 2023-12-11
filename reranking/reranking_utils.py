@@ -287,7 +287,7 @@ def save_dataset():
     dataset_test = reranking_dataset(dataset_test["tokens"], randoms, labels, consts=consts)
     with open("./outputs100/dataset_test.pkl", mode="wb") as f_t:
         pickle.dump(dataset_test, f_t)
-    exit()
+
     consts, randoms, labels = get_dataset_from_100pred("./outputs100/output_2023.txt")
     dataset_100 = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/conll2023.txt")
     dataset_100 = reranking_dataset(dataset_100["tokens"], randoms, labels, consts=consts)
