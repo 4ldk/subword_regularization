@@ -21,6 +21,8 @@ def upper_bound(label, preds):
 def round_table(file_iter, encoding, vote="majority"):
     output = []
     for line in file_iter:
+        if line[-1:] == "\n":
+            line = line[:-1]
         if len(line) < 5:
             output.append("")
         else:
@@ -49,16 +51,14 @@ def round_table(file_iter, encoding, vote="majority"):
     conlleval.evaluate_conll_file(file_iter)
 
 
-@hydra.main(config_path="./config", config_name="conll2003", version_base="1.1")
+@hydra.main(config_path="../config", config_name="conll2003", version_base="1.1")
 def main(cfg):
     if cfg.test == 2003:
         encoding = "cp-932"
     else:
         encoding = "utf-8"
 
-    input_path = (
-        "C:/Users/chenr/Desktop/python/subword_regularization/outputs/bert_pred_roop/2023-10-24/01-58-34/many_preds.txt"
-    )
+    input_path = "C:/Users/chenr/Desktop/python/subword_regularization/outputs/bert_pred_roop/2023-12-19/bertner_large_03_test/many_preds.txt"
     with open(input_path, encoding=encoding) as f:
         text = f.read()
     with open("./input_pred.txt", "w", encoding=encoding) as f:

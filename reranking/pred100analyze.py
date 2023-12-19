@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 
 
 def main():
-    use_datasets = ["test"]  # ["test","2023","valid"]
-    max_num = 100
-    zero_division = "skip"  # 0, 1, skip
+    use_datasets = ["test", "2023", "valid"]  # ["test","2023","valid"]
+    max_num = 10
+    zero_division = "skip"  # "skip"  # 0, 1, skip
     dataset_list = []
 
     for u_d in use_datasets:
@@ -76,13 +76,24 @@ def main():
     pred = np.array(pred)
     fig, ax = plt.subplots()
     ax2 = ax.twinx()
-    ax.bar(nums[:max_num], counts[:max_num])
-    ax2.plot(nums[:max_num], ave_f1s[:max_num], color="k")
-    ax2.set_ylim(0.75, 1)
-    ax.set_yscale("log")
+    ax2.bar(nums[:max_num], counts[:max_num])
+    ax.plot(nums[:max_num], ave_f1s[:max_num], color="k")
+    ax2.set_yscale("log")
+    ax.set_ylim(0.75, 1)
+    ax2.set_ylim(0.9, 5000)
 
+    ax.set_xlabel("Number of output variations")
+    ax.set_ylabel("F1 micro average")
+    ax2.set_ylabel("Number of sentences")
+
+    ax.set_zorder(2)
+    ax2.set_zorder(1)
+
+    ax.patch.set_alpha(0)
     plt.show()
 
+    # """
+    # ラベル数-F11の分布表示
     length = np.array(length)
     f1_for_length = np.array(f1_for_length)
     plt.scatter(length, f1_for_length, s=4)
@@ -90,7 +101,12 @@ def main():
     # フィッティング直線
     y2 = a * length + b
     plt.plot(length, y2, color="k")
+
+    plt.xlabel("Number of labels")
+    plt.ylabel("F1 micro average")
+
     plt.show()
+    # """
 
 
 if __name__ == "__main__":

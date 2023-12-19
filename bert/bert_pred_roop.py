@@ -6,11 +6,10 @@ import torch
 from datasets import load_dataset
 from round_table import round_table
 from tqdm import tqdm
-from transformers import (AutoModelForTokenClassification, AutoTokenizer,
-                          BertConfig)
+from tqdm.contrib import tzip
+from transformers import AutoModelForTokenClassification, AutoTokenizer
 
 from tools.ne_extracter import extract
-from utils.datamodule import BertCRF
 from utils.maxMatchTokenizer import MaxMatchTokenizer
 from utils.utils import get_texts_and_labels, path_to_data, val_to_key
 
@@ -26,6 +25,7 @@ ner_dict = {
     "I-MISC": 8,
     "PAD": 9,
 }
+
 pos_dict = {
     '"': 0,
     "''": 1,
@@ -81,16 +81,15 @@ pos_dict = {
 def main(cfg):
     length = cfg.length
     test = cfg.test
-    path = cfg.path
+    model_name = cfg.model_name
     loop = cfg.loop
     p = cfg.pred_p
     vote = cfg.vote
-    non_train = cfg.only_non_train_split
-    loop_pred(length, path, test, loop=loop, p=p, non_train=non_train, vote=vote)
+    non_train = False  # cfg.only_non_train_split
+    loop_pred(length, model_name, test, loop=loop, p=p, non_train=non_train, vote=vote)
 
 
-def loop_pred(length, path, test, loop=10, p=0.3, non_train=False, vote="majority"):
-    batch_size = 1
+def loop_pred(length, model_name, test, loop=100, p=0.1, non_train=False, vote="majority"):
     random.seed(42)
     np.random.seed(42)
     torch.manual_seed(42)
@@ -101,6 +100,11 @@ def loop_pred(length, path, test, loop=10, p=0.3, non_train=False, vote="majorit
     if test == "2003":
         dataset = load_dataset("conll2003")
         test_dataset = dataset["test"]
+        encoding = "cp932"
+
+    elif test == "valid":
+        dataset = load_dataset("conll2003")
+        test_dataset = dataset["validation"]
         encoding = "cp932"
 
     elif test == "2023":
@@ -116,17 +120,16 @@ def loop_pred(length, path, test, loop=10, p=0.3, non_train=False, vote="majorit
     trained_tokens = [train_row.split(", ")[0] for train_row in trained_tokens.split("\n") if len(train_row) != 0]
 
     mmt = MaxMatchTokenizer(ner_dict=ner_dict, p=0, padding=length, trained_tokens=trained_tokens)
-    bert_tokeninzer = AutoTokenizer.from_pretrained("bert-base-cased")
+    bert_tokeninzer = AutoTokenizer.from_pretrained(model_name)
     mmt.loadBertTokenizer(bertTokenizer=bert_tokeninzer)
 
-    config = BertConfig.from_pretrained("bert-base-cased", num_labels=len(ner_dict))
-    model = AutoModelForTokenClassification.from_config(config)
-    model = BertCRF(model, batch_size, len(ner_dict), length).to(device)
-    model.load_state_dict(torch.load(path))
+    model = AutoModelForTokenClassification.from_pretrained(model_name).to(device)
 
     model.eval()
     outputs = []
     for i in tqdm(range(loop)):
+        if i == loop - 1:
+            p = 0
         output = pred(mmt, test_data, test_dataset, model, device, p=p, non_train=non_train)
         outputs.append(output)
 
@@ -136,7 +139,6 @@ def loop_pred(length, path, test, loop=10, p=0.3, non_train=False, vote="majorit
             joined_out.append("")
         else:
             pred_ners = []
-            # print(outputs[0][index], outputs[1][index])
             for output in outputs:
                 token, pos, ner, pred_ner = output[index].split(" ")
                 if len(pred_ners) == 0:
@@ -174,18 +176,18 @@ def pred(mmt, test_data, test_dataset, model, device="cuda", p=0, non_train=Fals
 
     output = []
     with torch.no_grad():
-        for input, sub_input, label, out_token, out_pos, out_ner in zip(
-            inputs, attention_mask, labels, out_tokens, out_poses, out_ners
+        for input, mask, label, out_token, out_pos, out_ner in tzip(
+            inputs, attention_mask, labels, out_tokens, out_poses, out_ners, leave=False
         ):
-            input, sub_input, label = (
+            input, mask, label = (
                 input.to(device),
-                sub_input.to(device),
+                mask.to(device),
                 label.tolist(),
             )
             input = input.unsqueeze(0)
-            sub_input = sub_input.unsqueeze(0)
+            mask = mask.unsqueeze(0)
 
-            pred = model.decode(input, sub_input).squeeze().to("cpu").tolist()
+            pred = model(input, mask).logits.squeeze().argmax(-1).to("cpu").tolist()
 
             pred = [val_to_key(prd, ner_dict) for (prd, lbl) in zip(pred, label) if lbl != ner_dict["PAD"]]
             pred = [c if c != "PAD" else "O" for c in pred]
@@ -194,7 +196,6 @@ def pred(mmt, test_data, test_dataset, model, device="cuda", p=0, non_train=Fals
 
             out_pos = [val_to_key(o_p, pos_dict) for o_p in out_pos]
             out_ner = [val_to_key(o_n, ner_dict) for o_n in out_ner]
-
             out = [" ".join([t, p, c, pred]) for t, p, c, pred in zip(out_token, out_pos, out_ner, pred)]
             out = "\n".join(out)
             output.append(out)
