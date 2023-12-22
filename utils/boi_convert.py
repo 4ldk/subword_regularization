@@ -14,10 +14,12 @@ def convert(texts, output_path, encoding="utf-8"):
 
         else:
             data = d.split()
-            if data[-1][0] == "I" and pre_tag in ["", "O"]:
-                data[-1] = list(data[-1])
-                data[-1][0] = "B"
-                data[-1] = "".join(data[-1])
+            if data[-1][0] == "I":
+                if pre_tag in ["", "O"]:
+                    data[-1] = "B" + data[-1][1:]
+                elif (len(pre_tag) > 4) and (pre_tag[-3:] != data[-1][-3:]):
+                    data[-1] = "B" + data[-1][1:]
+
                 d = " ".join(data)
 
             pre_tag = data[-1][0]
@@ -54,6 +56,22 @@ def boi2_to_1(dataset):
         "pos_tags": pos_tags,
     }
     return new_dataset
+
+
+def boi1_to_2(labels):
+    new_labels = []
+    pre_tag = ""
+    for label in labels:
+        if label[0] == "I":
+            if pre_tag in ["", "O"]:
+                label = "B" + label[1:]
+            elif len(pre_tag) > 4 and pre_tag[-3:] != label[-3:]:
+                label = "B" + label[1:]
+
+        new_labels.append(label)
+        pre_tag = label
+
+    return new_labels
 
 
 if __name__ == "__main__":

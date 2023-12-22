@@ -1,17 +1,18 @@
 import random
+import sys
+import os
 
 import hydra
 import numpy as np
 import torch
-from datasets import load_dataset
 from round_table import round_table
 from tqdm import tqdm
 from tqdm.contrib import tzip
 from transformers import AutoModelForTokenClassification, AutoTokenizer
 
-from tools.ne_extracter import extract
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils.maxMatchTokenizer import MaxMatchTokenizer
-from utils.utils import get_texts_and_labels, path_to_data, val_to_key
+from utils.utils import path_to_data, val_to_key
 
 ner_dict = {
     "O": 0,
@@ -25,6 +26,20 @@ ner_dict = {
     "I-MISC": 8,
     "PAD": 9,
 }
+
+model_dict = {
+    "O": 0,
+    "B-PER": 1,
+    "I-PER": 2,
+    "B-ORG": 3,
+    "I-ORG": 4,
+    "B-LOC": 5,
+    "I-LOC": 6,
+    "B-MISC": 7,
+    "I-MISC": 8,
+    "PAD": 9,
+}
+
 
 pos_dict = {
     '"': 0,
@@ -85,41 +100,49 @@ def main(cfg):
     loop = cfg.loop
     p = cfg.pred_p
     vote = cfg.vote
-    non_train = False  # cfg.only_non_train_split
-    loop_pred(length, model_name, test, loop=loop, p=p, non_train=non_train, vote=vote)
+    loop_pred(length, model_name, test, loop=loop, p=p, vote=vote)
 
 
-def loop_pred(length, model_name, test, loop=100, p=0.1, non_train=False, vote="majority"):
+def loop_pred(length, model_name, test, loop=100, p=0.1, vote="majority"):
     random.seed(42)
     np.random.seed(42)
     torch.manual_seed(42)
     torch.cuda.manual_seed_all(42)
     torch.backends.cudnn.deterministic = True
 
+    if model_name[:10] == "dslim/bert":
+        global model_dict
+        model_dict = {
+            "O": 0,
+            "B-MISC": 1,
+            "I-MISC": 2,
+            "B-PER": 3,
+            "I-PER": 4,
+            "B-ORG": 5,
+            "I-ORG": 6,
+            "B-LOC": 7,
+            "I-LOC": 8,
+            "PAD": 9,
+        }
+
     device = "cuda"
     if test == "2003":
-        dataset = load_dataset("conll2003")
-        test_dataset = dataset["test"]
-        encoding = "cp932"
+        test_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.testb")
+        encoding = "utf-8"
 
     elif test == "valid":
-        dataset = load_dataset("conll2003")
-        test_dataset = dataset["validation"]
-        encoding = "cp932"
+        test_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.testa")
+        encoding = "utf-8"
 
     elif test == "2023":
-        test_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/conll2023.txt")
+        test_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/conllpp.txt")
         encoding = "utf-8"
     elif test == "crossweigh":
         test_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/conllcw.txt")
         encoding = "utf-8"
     print("Dataset Loaded")
-    test_data = get_texts_and_labels(test_dataset)
 
-    trained_tokens, _ = extract("train", all_token_extract=True)
-    trained_tokens = [train_row.split(", ")[0] for train_row in trained_tokens.split("\n") if len(train_row) != 0]
-
-    mmt = MaxMatchTokenizer(ner_dict=ner_dict, p=0, padding=length, trained_tokens=trained_tokens)
+    mmt = MaxMatchTokenizer(ner_dict=ner_dict, p=p, padding=length)
     bert_tokeninzer = AutoTokenizer.from_pretrained(model_name)
     mmt.loadBertTokenizer(bertTokenizer=bert_tokeninzer)
 
@@ -130,7 +153,7 @@ def loop_pred(length, model_name, test, loop=100, p=0.1, non_train=False, vote="
     for i in tqdm(range(loop)):
         if i == loop - 1:
             p = 0
-        output = pred(mmt, test_data, test_dataset, model, device, p=p, non_train=non_train)
+        output = pred(mmt, test_dataset, model, device, p=p)
         outputs.append(output)
 
     joined_out = []
@@ -159,25 +182,21 @@ def loop_pred(length, model_name, test, loop=100, p=0.1, non_train=False, vote="
     round_table(file_iter, encoding, vote)
 
 
-def pred(mmt, test_data, test_dataset, model, device="cuda", p=0, non_train=False):
-    if non_train:
-        test_data = mmt.dataset_encode(test_data, p=0, subword_label="PAD", non_train_p=p)
-    else:
-        test_data = mmt.dataset_encode(test_data, p=p, subword_label="PAD")
+def pred(mmt, test_dataset, model, device="cuda", p=0, non_train=False):
+    encoded_dataset = mmt.dataset_encode(test_dataset, p=p, subword_label="PAD")
 
-    inputs, attention_mask, labels, out_tokens, out_poses, out_ners = (
-        test_data["input_ids"],
-        test_data["attention_mask"],
-        test_data["subword_labels"],
-        test_dataset["tokens"],
-        test_dataset["pos_tags"],
-        test_dataset["ner_tags"],
+    inputs, attention_mask, labels, out_tokens, out_ners = (
+        encoded_dataset["input_ids"],
+        encoded_dataset["attention_mask"],
+        encoded_dataset["subword_labels"],
+        encoded_dataset["tokens"],
+        encoded_dataset["labels"],
     )
 
     output = []
     with torch.no_grad():
-        for input, mask, label, out_token, out_pos, out_ner in tzip(
-            inputs, attention_mask, labels, out_tokens, out_poses, out_ners, leave=False
+        for input, mask, label, out_token, out_ner in tzip(
+            inputs, attention_mask, labels, out_tokens, out_ners, leave=False
         ):
             input, mask, label = (
                 input.to(device),
@@ -189,12 +208,12 @@ def pred(mmt, test_data, test_dataset, model, device="cuda", p=0, non_train=Fals
 
             pred = model(input, mask).logits.squeeze().argmax(-1).to("cpu").tolist()
 
-            pred = [val_to_key(prd, ner_dict) for (prd, lbl) in zip(pred, label) if lbl != ner_dict["PAD"]]
+            pred = [val_to_key(prd, model_dict) for (prd, lbl) in zip(pred, label) if lbl != ner_dict["PAD"]]
             pred = [c if c != "PAD" else "O" for c in pred]
             if len(pred) != len(label):
                 pred = pred + ["O"] * (len(out_ner) - len(pred))
 
-            out_pos = [val_to_key(o_p, pos_dict) for o_p in out_pos]
+            out_pos = ["POS" for _ in out_ner]
             out_ner = [val_to_key(o_n, ner_dict) for o_n in out_ner]
             out = [" ".join([t, p, c, pred]) for t, p, c, pred in zip(out_token, out_pos, out_ner, pred)]
             out = "\n".join(out)

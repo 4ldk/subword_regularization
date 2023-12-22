@@ -13,7 +13,7 @@ class BertCRF(nn.Module):
 
     def forward(self, x, p, y):
         preds = self.model(x, p)
-        if type(preds) == torch.Tensor:
+        if type(preds) is torch.Tensor:
             x = preds
         else:
             x = preds["logits"]
@@ -23,7 +23,7 @@ class BertCRF(nn.Module):
 
     def decode(self, x, p):
         preds = self.model(x, p)
-        if type(preds) == torch.Tensor:
+        if type(preds) is torch.Tensor:
             x = preds
         else:
             x = preds["logits"]
@@ -36,11 +36,11 @@ class BertCRF(nn.Module):
 class BertDataset(Dataset):
     def __init__(self, X, mask, y) -> None:
         super().__init__()
-        if type(X) != torch.Tensor:
+        if type(X) is not torch.Tensor:
             X = torch.tensor(X)
-        if type(mask) != torch.Tensor:
+        if type(mask) is torch.Tensor:
             mask = torch.tensor(mask)
-        if type(y) != torch.Tensor:
+        if type(y) is not torch.Tensor:
             y = torch.tensor(y)
 
         self.X = X

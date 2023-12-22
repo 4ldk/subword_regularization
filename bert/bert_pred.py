@@ -1,4 +1,6 @@
 import random
+import sys
+import os
 
 import conlleval
 import hydra
@@ -6,10 +8,12 @@ import numpy as np
 import torch
 from datasets import load_dataset
 from tqdm import tqdm
-from transformers import (AutoModelForTokenClassification, AutoTokenizer,
-                          BertConfig)
+from transformers import AutoModelForTokenClassification, AutoTokenizer, BertConfig
 
 from tools.ne_extracter import extract
+
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils.boi_convert import convert
 from utils.datamodule import BertCRF
 from utils.maxMatchTokenizer import MaxMatchTokenizer
@@ -22,6 +26,7 @@ def main(cfg):
     path = cfg.path
     test = cfg.test
     leak = cfg.leak
+    os.environ["TRANSFORMERS_CACHE"] = "D:\\huggingface\\cashe"
     pred(length, path, test, leak)
 
 

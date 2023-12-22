@@ -1,11 +1,14 @@
+import sys
+import os
 import numpy as np
 from sklearn.metrics import accuracy_score
 from timm.scheduler import CosineLRScheduler
 from torch import optim
 from torch.utils.data import DataLoader
-from tqdm import tqdm
 
-from utils.datamodule import BertDataset
+sys.path.append(os.path.join(os.path.dirname(__file__), "."))
+from datamodule import BertDataset
+from boi_convert import boi1_to_2
 
 
 def recall_score(target, pred, average=None, skip=-1):
@@ -116,13 +119,8 @@ def val_to_key(val, dic, pad_key="PAD"):
 
 def path_to_data(path):
     with open(path, "r", encoding="utf-8") as f:
-        data = f.read()
-    data = data.split("\n\n")
-    data = [d.split("\n") for d in data]
+        row_data = f.readlines()
 
-    text = []
-    tag = []
-    pos = []
     ner_dict = {
         "O": 0,
         "B-PER": 1,
@@ -136,18 +134,41 @@ def path_to_data(path):
         "PAD": 9,
     }
 
-    for sentence in tqdm(data):
-        if len(sentence) == 0:
-            continue
+    data = []
+    doc_index = []
+    tokens = []
+    labels = []
+    pre_doc_end = 0
+    for line in row_data:
+        if "-DOCSTART-" in line:
+            if len(tokens) != 0:
+                labels = [key_to_val(la, ner_dict) for la in boi1_to_2(labels)]
+                document = dict(tokens=tokens, labels=labels, doc_index=doc_index)
+                data.append(document)
+                tokens = []
+                labels = []
+                doc_index = []
+                pre_doc_end = 0
 
-        divided = [s.split(" ") for s in sentence]
-        text.append([d[0] for d in divided if len(d) == 4])
-        tag.append([ner_dict[d[3]] for d in divided if len(d) == 4])
-        pos.append(["0"] * len(tag[-1]))
+        elif len(line) <= 5:
+            if len(tokens) != 0:
+                doc_start = pre_doc_end
+                doc_end = len(tokens)
+                doc_index.append((doc_start, doc_end))
 
-    data = {
-        "tokens": text,
-        "ner_tags": tag,
-        "pos_tags": pos,
-    }
+                pre_doc_end = doc_end
+        else:
+            line = line.strip()
+            line = line.split()
+
+            tokens.append(line[0])
+            labels.append(line[-1])
+
     return data
+
+
+if __name__ == "__main__":
+    data = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/conllpp.txt")
+    print(data[0])
+    for i, j in data[0]["doc_index"]:
+        print(data[0]["tokens"][i:j])

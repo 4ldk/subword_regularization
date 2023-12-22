@@ -222,54 +222,93 @@ class MaxMatchTokenizer:
         split_first=False,
     ):
         p = p if p else self.p
-        labels, texts = (
-            data["labels"],
-            data["tokens"],
-        )
 
-        tokens = [self.encode(" ".join(text), p=p, non_train_p=non_train_p, split_first=split_first) for text in texts]
-        input_ids = [tkns[0] for tkns in tokens]
-        word_ids = [tkns[1] for tkns in tokens]
-        attention_mask = [tkns[2] for tkns in tokens]
-
+        row_tokens = []
+        row_labels = []
+        input_ids = []
+        attention_mask = []
         subword_labels = []
-        for i, label in enumerate(labels):
-            previous_word_idx = None
-            label_ids = []
-            for word_idx in word_ids[i]:
-                if word_idx is None:
-                    label_ids.append(self.ner_dict["PAD"])
-                elif word_idx != previous_word_idx:  # Only label the first token of a given word.
-                    label_ids.append(label[word_idx])
-                else:
-                    if subword_label == "I":
-                        label_ids.append(self.subword_dict[label[word_idx]])
-                    elif subword_label == "B":
-                        label_ids.append(label[word_idx])
-                    elif subword_label == "PAD":
-                        label_ids.append(self.ner_dict["PAD"])
-                    else:
-                        print("subword_label must be 'I', 'B' or 'PAD'.")
-                        exit(1)
+        for document in data:
+            text = document["tokens"]
+            labels = document["labels"]
+            max_legnth = self.padding - 2 if self.padding else len(text)
 
-                previous_word_idx = word_idx
-            subword_labels.append(label_ids)
+            for i, j in document["doc_index"]:
+                subwords, word_ids = self.tokenize(" ".join(text[i:j]), p)
+                row_tokens.append(text[i:j])
+                row_labels.append(labels[i:j])
+
+                while len(subwords) < max_legnth and i > 0:
+                    i -= 1
+                    subwords = self.tokenizeWord(text[i]) + subwords
+                    if len(subwords) < max_legnth:
+                        subwords = subwords[-max_legnth:]
+                word_ids = [None] * (len(subwords) - len(word_ids)) + word_ids
+
+                while len(subwords) < max_legnth and j < len(text) - 1:
+                    j += 1
+                    subwords = subwords + self.tokenizeWord(text[j])
+                    if len(subwords) < max_legnth:
+                        subwords = subwords[:max_legnth]
+                word_ids = word_ids + [None] * (len(subwords) - len(word_ids))
+
+                subwords = [self.clsTokenId] + [self.word2id[w] for w in subwords] + [self.sepTokenId]
+                word_ids = [None] + word_ids + [None]
+
+                if self.padding:
+                    if len(subwords) >= self.padding:
+                        subwords = subwords[: self.padding]
+                        word_ids = word_ids[: self.padding]
+                        mask = [1] * self.padding
+                    else:
+                        attention_len = len(subwords)
+                        pad_len = self.padding - len(subwords)
+                        subwords += [self.padTokenId] * pad_len
+                        word_ids += [None] * pad_len
+                        mask = [1] * attention_len + [0] * pad_len
+                else:
+                    mask = [1] * len(subwords)
+
+                input_ids.append(subwords)
+                attention_mask.append(mask)
+
+                label = row_labels[-1]
+                previous_word_idx = None
+                label_ids = []
+                for word_idx in word_ids:
+                    if word_idx is None:
+                        label_ids.append(self.ner_dict["PAD"])
+                    elif word_idx != previous_word_idx:  # Only label the first token of a given word.
+                        label_ids.append(label[word_idx])
+                    else:
+                        if subword_label == "I":
+                            label_ids.append(self.subword_dict[label[word_idx]])
+                        elif subword_label == "B":
+                            label_ids.append(label[word_idx])
+                        elif subword_label == "PAD":
+                            label_ids.append(self.ner_dict["PAD"])
+                        else:
+                            print("subword_label must be 'I', 'B' or 'PAD'.")
+                            exit(1)
+
+                    previous_word_idx = word_idx
+                    subword_labels.append(label_ids)
 
         if return_tensor:
             data = {
                 "input_ids": torch.tensor(input_ids, dtype=torch.int),
                 "attention_mask": torch.tensor(attention_mask, dtype=torch.int),
                 "subword_labels": torch.tensor(subword_labels, dtype=torch.int),
-                "tokens": data["tokens"],
-                "labels": data["labels"],
+                "tokens": row_tokens,
+                "labels": row_labels,
             }
         else:
             data = {
                 "input_ids": input_ids,
                 "attention_mask": attention_mask,
                 "subword_labels": subword_labels,
-                "tokens": data["tokens"],
-                "labels": data["labels"],
+                "tokens": row_tokens,
+                "labels": row_labels,
             }
         return data
 

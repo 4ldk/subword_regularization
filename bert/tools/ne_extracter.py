@@ -4,7 +4,7 @@ import sys
 from datasets import load_dataset
 from transformers import AutoTokenizer
 
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
 from utils.maxMatchTokenizer import MaxMatchTokenizer
 from utils.utils import path_to_data, val_to_key
 
