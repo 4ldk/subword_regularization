@@ -5,7 +5,6 @@ import seqeval.metrics
 from itertools import chain
 
 import hydra
-from sklearn.metrics import classification_report
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils.boi_convert import boi1_to_2
@@ -62,7 +61,6 @@ def round_table(file_iter, encoding, vote="majority"):
     eval_preds = list(chain.from_iterable(eval_preds))
     eval_labels = list(chain.from_iterable(eval_labels))
     print(seqeval.metrics.classification_report([eval_labels], [eval_preds], digits=4))
-    print(classification_report(eval_labels, eval_preds, digits=4))
 
 
 @hydra.main(config_path="../config", config_name="conll2003", version_base="1.1")
