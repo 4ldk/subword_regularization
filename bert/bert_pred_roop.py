@@ -208,6 +208,9 @@ def pred(mmt, test_dataset, model, device="cuda", p=0, non_train=False):
 
             pred = model(input, mask).logits.squeeze().argmax(-1).to("cpu").tolist()
 
+            if out_token == ["LA", "CLIPPERS", "AT", "NEW", "YORK"]:
+                a = [val_to_key(prd, model_dict) for prd in pred]
+                print(a)
             pred = [val_to_key(prd, model_dict) for (prd, lbl) in zip(pred, label) if lbl != ner_dict["PAD"]]
             pred = [c if c != "PAD" else "O" for c in pred]
             if len(pred) != len(label):

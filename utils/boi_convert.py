@@ -75,18 +75,5 @@ def boi1_to_2(labels):
 
 
 if __name__ == "__main__":
-    if not os.path.exists("./test_datasets"):
-        os.makedirs("./test_datasets")
-
-    encoding = "utf-8"
-    with open("./CrossWeigh/data/conllpp_test.txt", encoding=encoding) as f:
-        text = f.read()
-        text = text.split("\n")
-        text = text[2:]
-    convert(text, "./test_datasets/conllcw.txt", encoding)
-
-    with open("./acl2023_conllpp/dataset/conllpp.txt", encoding=encoding) as f:
-        text = f.read()
-        text = text.split("\n")
-        text = text[2:]
-    convert(text, "./test_datasets/conll2023.txt", encoding)
+    labels = ["I-ORG", "I-ORG", "O", "I-ORG", "I-MISC", "I-LOC"]
+    print(boi1_to_2(labels))

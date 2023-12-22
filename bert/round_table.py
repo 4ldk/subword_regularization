@@ -37,7 +37,6 @@ def round_table(file_iter, encoding, vote="majority"):
         if len(line) < 5:
             if len(eval_pred) != 0:
                 eval_preds.append(eval_pred)
-                eval_label = boi1_to_2(eval_label)
                 eval_labels.append(eval_label)
                 eval_pred = []
                 eval_label = []
@@ -71,7 +70,7 @@ def main(cfg):
         encoding = "utf-8"
 
     input_path = (
-        "C:/Users/chenr/Desktop/python/subword_regularization/outputs/bert_pred_roop/2023-12-22/19-05-42/many_preds.txt"
+        "C:/Users/chenr/Desktop/python/subword_regularization/outputs/bert_pred_roop/2023-12-23/02-07-53/many_preds.txt"
     )
     with open(input_path, encoding=encoding) as f:
         text = f.read()

@@ -292,7 +292,8 @@ class MaxMatchTokenizer:
                             exit(1)
 
                     previous_word_idx = word_idx
-                    subword_labels.append(label_ids)
+
+                subword_labels.append(label_ids)
 
         if return_tensor:
             data = {

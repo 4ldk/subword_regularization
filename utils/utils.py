@@ -138,14 +138,16 @@ def path_to_data(path):
     doc_index = []
     tokens = []
     labels = []
+    replaced_labels = []
     pre_doc_end = 0
     for line in row_data:
         if "-DOCSTART-" in line:
             if len(tokens) != 0:
-                labels = [key_to_val(la, ner_dict) for la in boi1_to_2(labels)]
+                labels = [key_to_val(la, ner_dict) for la in replaced_labels]
                 document = dict(tokens=tokens, labels=labels, doc_index=doc_index)
                 data.append(document)
                 tokens = []
+                replaced_labels = []
                 labels = []
                 doc_index = []
                 pre_doc_end = 0
@@ -157,6 +159,8 @@ def path_to_data(path):
                 doc_index.append((doc_start, doc_end))
 
                 pre_doc_end = doc_end
+                replaced_labels += boi1_to_2(labels)
+                labels = []
         else:
             line = line.strip()
             line = line.split()
