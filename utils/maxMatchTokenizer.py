@@ -239,6 +239,8 @@ class MaxMatchTokenizer:
                 row_labels.append(labels[i:j])
 
                 while len(subwords) < max_legnth and i > 0:
+                    if i in [d[1] for d in document["doc_index"]]:
+                        subwords = [self.sepToken] + subwords
                     i -= 1
                     subwords = self.tokenizeWord(text[i]) + subwords
                     if len(subwords) < max_legnth:
@@ -246,6 +248,8 @@ class MaxMatchTokenizer:
                 word_ids = [None] * (len(subwords) - len(word_ids)) + word_ids
 
                 while len(subwords) < max_legnth and j < len(text) - 1:
+                    if j in [d[0] for d in document["doc_index"]]:
+                        subwords = subwords + [self.sepToken]
                     j += 1
                     subwords = subwords + self.tokenizeWord(text[j])
                     if len(subwords) < max_legnth:
