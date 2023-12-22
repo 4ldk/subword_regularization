@@ -247,11 +247,11 @@ class MaxMatchTokenizer:
                         subwords = subwords[-max_legnth:]
                 word_ids = [None] * (len(subwords) - len(word_ids)) + word_ids
 
-                while len(subwords) < max_legnth and j < len(text) - 1:
+                while len(subwords) < max_legnth and j < len(text):
                     if j in [d[0] for d in document["doc_index"]]:
                         subwords = subwords + [self.sepToken]
-                    j += 1
                     subwords = subwords + self.tokenizeWord(text[j])
+                    j += 1
                     if len(subwords) < max_legnth:
                         subwords = subwords[:max_legnth]
                 word_ids = word_ids + [None] * (len(subwords) - len(word_ids))
