@@ -38,7 +38,7 @@ class BertDataset(Dataset):
         super().__init__()
         if type(X) is not torch.Tensor:
             X = torch.tensor(X)
-        if type(mask) is torch.Tensor:
+        if type(mask) is not torch.Tensor:
             mask = torch.tensor(mask)
         if type(y) is not torch.Tensor:
             y = torch.tensor(y)

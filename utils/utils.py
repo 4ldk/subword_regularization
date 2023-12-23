@@ -1,5 +1,6 @@
-import sys
 import os
+import sys
+
 import numpy as np
 from sklearn.metrics import accuracy_score
 from timm.scheduler import CosineLRScheduler
@@ -7,8 +8,8 @@ from torch import optim
 from torch.utils.data import DataLoader
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "."))
-from datamodule import BertDataset
 from boi_convert import boi1_to_2
+from datamodule import BertDataset
 
 
 def recall_score(target, pred, average=None, skip=-1):
@@ -97,8 +98,6 @@ def get_dataloader(data, batch_size, shuffle=True):
         dataset,
         batch_size=batch_size,
         shuffle=shuffle,
-        num_workers=2,
-        pin_memory=True,
         drop_last=True,
     )
     return dataloader

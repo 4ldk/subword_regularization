@@ -1,11 +1,12 @@
+import os
+import pickle
+import sys
+
 import numpy as np
 import torch
+from datasets import load_dataset
 from sklearn.metrics import accuracy_score
 from torch.utils.data import Dataset
-import sys
-import os
-from datasets import load_dataset
-import pickle
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils.utils import path_to_data

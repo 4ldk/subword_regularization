@@ -1,13 +1,8 @@
 from collections import Counter
-import sys
-import os
-import seqeval.metrics
 from itertools import chain
 
 import hydra
-
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from utils.boi_convert import boi1_to_2
+import seqeval.metrics
 
 
 def majority(preds):

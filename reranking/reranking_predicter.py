@@ -3,10 +3,9 @@ import random
 import numpy as np
 import seqeval.metrics
 import torch
+from reranking_utils import get_dataset
 from tqdm.contrib import tzip
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
-from reranking_utils import get_dataset
-
 
 random.seed(42)
 np.random.seed(42)

@@ -1,6 +1,6 @@
+import os
 import random
 import sys
-import os
 
 import hydra
 import numpy as np
@@ -94,6 +94,7 @@ pos_dict = {
 
 @hydra.main(config_path="../config", config_name="conll2003", version_base="1.1")
 def main(cfg):
+    os.environ["TRANSFORMERS_CACHE"] = "D:\\huggingface\\cashe"
     length = cfg.length
     test = cfg.test
     model_name = cfg.model_name
@@ -188,7 +189,7 @@ def pred(mmt, test_dataset, model, device="cuda", p=0, non_train=False):
     inputs, attention_mask, labels, out_tokens, out_ners = (
         encoded_dataset["input_ids"],
         encoded_dataset["attention_mask"],
-        encoded_dataset["subword_labels"],
+        encoded_dataset["predict_labels"],
         encoded_dataset["tokens"],
         encoded_dataset["labels"],
     )

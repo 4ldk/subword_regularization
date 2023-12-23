@@ -1,7 +1,6 @@
 import seqeval.metrics
 from LUKE_utils import round_preds
 
-
 if __name__ == "__main__":
     path = "./outputs100/output_valid.txt"
     consts = []

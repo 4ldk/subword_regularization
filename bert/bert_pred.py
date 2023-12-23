@@ -1,17 +1,16 @@
+import os
 import random
 import sys
-import os
 
 import conlleval
 import hydra
 import numpy as np
 import torch
 from datasets import load_dataset
-from tqdm import tqdm
-from transformers import AutoModelForTokenClassification, AutoTokenizer, BertConfig
-
 from tools.ne_extracter import extract
-
+from tqdm import tqdm
+from transformers import (AutoModelForTokenClassification, AutoTokenizer,
+                          BertConfig)
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils.boi_convert import convert
