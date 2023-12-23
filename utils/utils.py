@@ -1,6 +1,7 @@
 import os
 import sys
 
+import torch
 from torch.utils.data import DataLoader
 from seqeval import metrics
 
@@ -8,26 +9,54 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "."))
 from boi_convert import boi1_to_2
 from datamodule import BertDataset
 
+ner_dict = {
+    "O": 0,
+    "B-PER": 1,
+    "I-PER": 2,
+    "B-ORG": 3,
+    "I-ORG": 4,
+    "B-LOC": 5,
+    "I-LOC": 6,
+    "B-MISC": 7,
+    "I-MISC": 8,
+    "PAD": 9,
+}
+
 
 def recall_score(target, pred, average="micro", skip=-1):
-    pred = [p for p, t in zip(pred, target) if t != skip]
-    target = [t for t in target if t != skip]
+    new_target = []
+    new_pred = []
+    for p, t in zip(pred, target):
+        if t != skip:
+            new_target.append(val_to_key(t, ner_dict))
+            p = p if p != skip else 0
+            new_pred.append(val_to_key(p, ner_dict))
 
-    return metrics.recall_score(target, pred, average=average)
+    return metrics.recall_score([new_target], [new_pred], average=average)
 
 
 def precision_score(target, pred, average="micro", skip=-1):
-    pred = [p for p, t in zip(pred, target) if t != skip]
-    target = [t for t in target if t != skip]
+    new_target = []
+    new_pred = []
+    for p, t in zip(pred, target):
+        if t != skip:
+            new_target.append(val_to_key(t, ner_dict))
+            p = p if p != skip else 0
+            new_pred.append(val_to_key(p, ner_dict))
 
-    return metrics.precision_score(target, pred, average=average)
+    return metrics.precision_score([new_target], [new_pred], average=average)
 
 
 def f1_score(target, pred, skip=-1):
-    pred = [p for p, t in zip(pred, target) if t != skip]
-    target = [t for t in target if t != skip]
+    new_target = []
+    new_pred = []
+    for p, t in zip(pred, target):
+        if t != skip:
+            new_target.append(val_to_key(t, ner_dict))
+            p = p if p != skip else 0
+            new_pred.append(val_to_key(p, ner_dict))
 
-    return metrics.f1_score(target, pred)
+    return metrics.f1_score([new_target], [new_pred])
 
 
 def get_texts_and_labels(dataset):
@@ -63,9 +92,7 @@ def key_to_val(key, dic):
 
 def val_to_key(val, dic, pad_key="PAD"):
     keys = [k for k, v in dic.items() if v == val]
-    if keys == pad_key:
-        return "PAD"
-    elif keys:
+    if keys:
         return keys[0]
     return "UNK"
 
@@ -73,19 +100,6 @@ def val_to_key(val, dic, pad_key="PAD"):
 def path_to_data(path):
     with open(path, "r", encoding="utf-8") as f:
         row_data = f.readlines()
-
-    ner_dict = {
-        "O": 0,
-        "B-PER": 1,
-        "I-PER": 2,
-        "B-ORG": 3,
-        "I-ORG": 4,
-        "B-LOC": 5,
-        "I-LOC": 6,
-        "B-MISC": 7,
-        "I-MISC": 8,
-        "PAD": 9,
-    }
 
     data = []
     doc_index = []

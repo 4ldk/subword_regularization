@@ -178,9 +178,6 @@ class MaxMatchTokenizer:
         self.padToken = bertTokenizer.pad_token
         self.padTokenId = bertTokenizer.pad_token_id
 
-        if self.use_stop_word:
-            self.stop_words = [s_word for s_word in self.stop_words if s_word in self.vocab]
-
     def naivePreproc(self, text):
         return " ".join(self.bertTokenizer.tokenize(text)).replace(" " + self.midPref, "")
 

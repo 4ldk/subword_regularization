@@ -13,7 +13,7 @@ device: "cuda"
 model_name: "bert-base-cased"
 
 use_scheduler: False
-num_warmup_steps: 10000
+num_warmup_steps: 300
 
 test: "2003" # 2003, 2023, crossweigh valid
 
