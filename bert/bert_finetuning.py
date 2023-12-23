@@ -8,11 +8,11 @@ import numpy as np
 import torch
 from torch import nn, optim
 from tqdm import tqdm
-from transformers import AutoModelForTokenClassification, AutoTokenizer
+from transformers import AutoModelForTokenClassification, AutoTokenizer, get_linear_schedule_with_warmup
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils.maxMatchTokenizer import MaxMatchTokenizer
-from utils.utils import CosineScheduler, f1_score, get_dataloader, path_to_data
+from utils.utils import f1_score, get_dataloader, path_to_data
 
 ner_dict = {
     "O": 0,
@@ -34,28 +34,24 @@ def main(cfg):
     batch_size = cfg.batch_size
     lr = cfg.lr
     num_epoch = cfg.num_epoch
-    warmup_t = cfg.warmup_t
     length = cfg.length
     p = cfg.p
     seed = cfg.seed
     model_name = cfg.model_name
 
     use_scheduler = cfg.use_scheduler
-    lr_min = cfg.lr_min
-    warmup_lr_init = cfg.warmup_lr_init
+    num_warmup_steps = cfg.num_warmup_steps
 
     train(
         batch_size,
         lr,
         num_epoch,
-        warmup_t,
         length,
         p,
         seed,
         model_name,
-        lr_min,
-        warmup_lr_init,
         use_scheduler,
+        num_warmup_steps,
     )
 
 
@@ -63,14 +59,12 @@ def train(
     batch_size,
     lr,
     num_epoch,
-    warmup_t,
     length,
     p,
     seed,
     model_name,
-    lr_min,
-    warmup_lr_init,
     use_scheduler=False,
+    num_warmup_steps=10000,
 ):
     random.seed(seed)
     np.random.seed(seed)
@@ -87,6 +81,9 @@ def train(
     mmt.loadBertTokenizer(bertTokenizer=bert_tokeninzer)
 
     train_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.train")
+    train_data = mmt.dataset_encode(train_dataset, p=p)
+    train_loader = get_dataloader(train_data, batch_size=batch_size, shuffle=True)
+
     valid_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.testa")
     valid_data = mmt.dataset_encode(valid_dataset, p=0)
     valid_loader = get_dataloader(valid_data, batch_size=batch_size, shuffle=True)
@@ -99,25 +96,17 @@ def train(
         model.parameters(),
         lr=lr,
         betas=(0.9, 0.999),
+        weight_decay=0.01,
         amsgrad=True,
     )
     scaler = torch.cuda.amp.GradScaler(init_scale=init_scale)
     if use_scheduler:
-        scheduler = CosineScheduler(
-            optimizer,
-            t_initial=num_epoch - warmup_t,
-            lr_min=lr_min,
-            warmup_t=warmup_t,
-            warmup_lr_init=warmup_lr_init,
-            warmup_prefix=True,
-        )
+        scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps, len(train_loader))
 
     f1s = []
     losses = []
     for epoch in range(num_epoch):
         model.train()
-        train_data = mmt.dataset_encode(train_dataset, p=p)
-        train_loader = get_dataloader(train_data, batch_size=batch_size, shuffle=True)
         train_bar = tqdm(train_loader, leave=False, desc=f"Epoch{epoch} ")
         batch_loss = []
         for input, sub_input, label in train_bar:
@@ -139,13 +128,13 @@ def train(
             optimizer.step()
             scaler.update()
 
+            if use_scheduler:
+                scheduler.step()
+
             train_bar.set_postfix(loss=loss.to("cpu").item())
             batch_loss.append(loss.to("cpu").item())
 
         losses.append(sum(batch_loss) / len(batch_loss))
-
-        if use_scheduler:
-            scheduler.step()
 
         model.eval()
         preds = []
@@ -176,6 +165,9 @@ def train(
 
         save_path = f"./model/epoch{epoch}.pth"
         torch.save(model.state_dict(), save_path)
+
+        train_data = mmt.dataset_encode(train_dataset, p=p)
+        train_loader = get_dataloader(train_data, batch_size=batch_size, shuffle=True)
 
     with open("./train_valid_score.csv", "w") as f:
         min_loss = 100

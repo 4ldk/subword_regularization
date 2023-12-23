@@ -4,25 +4,20 @@ hydra:
 
 
 batch_size: 16
-lr: 3e-5
+lr: 5e-5
 num_epoch: 5
 length: 512
 p: 0
 seed: 42
 device: "cuda"
 model_name: "bert-base-cased"
-stop_word: False
-as_aug: False
-boi1: False
 
 use_scheduler: False
-warmup_t: 10
-lr_min: 1e-7
-warmup_lr_init: 1e-6
+num_warmup_steps: 10000
 
 test: "2003" # 2003, 2023, crossweigh valid
 
-local_model: "C:\\Users\\chenr\\Desktop\\python\\subword_regularization\\outputs\\bert_finetuning\\2023-12-23\\23-17-23\\model\\best.pth"
+local_model: "C:\\Users\\chenr\\Desktop\\python\\subword_regularization\\outputs\\bert_finetuning\\2023-12-23\\23-17-23\\model\\epoch4.pth"
 loop: 1
 pred_p: 0
 vote: majority

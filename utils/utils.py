@@ -1,79 +1,33 @@
 import os
 import sys
 
-import numpy as np
-from sklearn.metrics import accuracy_score
-from timm.scheduler import CosineLRScheduler
-from torch import optim
 from torch.utils.data import DataLoader
+from seqeval import metrics
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "."))
 from boi_convert import boi1_to_2
 from datamodule import BertDataset
 
 
-def recall_score(target, pred, average=None, skip=-1):
-    if type(target) not in [list, tuple]:
-        target = target.tolist()
-        pred = pred.tolist()
-    target_type = list(set(target))
-    count_dict = {t_t: [0, 0] for t_t in target_type if t_t != skip}
-    for tar, pre in zip(target, pred):
-        if tar == skip:
-            continue
-        if tar == pre:
-            count_dict[tar][0] += 1
-        else:
-            count_dict[tar][1] += 1
-    count_dict = [c_d[0] / sum(c_d) for c_d in count_dict.values()]
-    if average is not None:
-        count_dict = sum(count_dict) / len(count_dict)
-    return np.array(count_dict)
+def recall_score(target, pred, average="micro", skip=-1):
+    pred = [p for p, t in zip(pred, target) if t != skip]
+    target = [t for t in target if t != skip]
+
+    return metrics.recall_score(target, pred, average=average)
 
 
-def precision_score(target, pred, average=None, skip=-1):
-    if type(target) not in [list, tuple]:
-        target = target.tolist()
-        pred = pred.tolist()
-    pred_type = list(set(pred))
-    count_dict = {p_t: [0, 0] for p_t in pred_type}
-    for tar, pre in zip(target, pred):
-        if tar == skip:
-            continue
-        if tar == pre:
-            count_dict[pre][0] += 1
-        else:
-            count_dict[pre][1] += 1
-    count_dict = [c_d[0] / sum(c_d) for c_d in count_dict.values() if sum(c_d) != 0]
-    if average is not None:
-        count_dict = sum(count_dict) / len(count_dict)
-    return np.array(count_dict)
+def precision_score(target, pred, average="micro", skip=-1):
+    pred = [p for p, t in zip(pred, target) if t != skip]
+    target = [t for t in target if t != skip]
+
+    return metrics.precision_score(target, pred, average=average)
 
 
 def f1_score(target, pred, skip=-1):
-    recall = recall_score(target, pred, average="micro", skip=skip)
-    prec = precision_score(target, pred, average="micro", skip=skip)
+    pred = [p for p, t in zip(pred, target) if t != skip]
+    target = [t for t in target if t != skip]
 
-    return 2 / (1 / recall + 1 / prec)
-
-
-class CosineScheduler(optim.lr_scheduler.LambdaLR):
-    def __init__(self, optimizer, **kwargs):
-        self.init_lr = optimizer.param_groups[0]["lr"]
-        self.timmsteplr = CosineLRScheduler(optimizer, **kwargs)
-        super().__init__(optimizer, self)
-
-    def __call__(self, epoch):
-        desired_lr = self.timmsteplr.get_epoch_values(epoch)[0]
-        mult = desired_lr / self.init_lr
-        return mult
-
-
-def compute_metrics(pred):
-    labels = pred.label_ids
-    preds = pred.predictions.argmax(-1)
-    acc = accuracy_score(labels, preds)
-    return acc
+    return metrics.f1_score(target, pred)
 
 
 def get_texts_and_labels(dataset):

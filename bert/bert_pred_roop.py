@@ -41,57 +41,6 @@ model_dict = {
 }
 
 
-pos_dict = {
-    '"': 0,
-    "''": 1,
-    "#": 2,
-    "$": 3,
-    "(": 4,
-    ")": 5,
-    ",": 6,
-    ".": 7,
-    ":": 8,
-    "``": 9,
-    "CC": 10,
-    "CD": 11,
-    "DT": 12,
-    "EX": 13,
-    "FW": 14,
-    "IN": 15,
-    "JJ": 16,
-    "JJR": 17,
-    "JJS": 18,
-    "LS": 19,
-    "MD": 20,
-    "NN": 21,
-    "NNP": 22,
-    "NNPS": 23,
-    "NNS": 24,
-    "NN|SYM": 25,
-    "PDT": 26,
-    "POS": 27,
-    "PRP": 28,
-    "PRP$": 29,
-    "RB": 30,
-    "RBR": 31,
-    "RBS": 32,
-    "RP": 33,
-    "SYM": 34,
-    "TO": 35,
-    "UH": 36,
-    "VB": 37,
-    "VBD": 38,
-    "VBG": 39,
-    "VBN": 40,
-    "VBP": 41,
-    "VBZ": 42,
-    "WDT": 43,
-    "WP": 44,
-    "WP$": 45,
-    "WRB": 46,
-}
-
-
 @hydra.main(config_path="../config", config_name="conll2003", version_base="1.1")
 def main(cfg):
     os.environ["TRANSFORMERS_CACHE"] = "D:\\huggingface\\cashe"
