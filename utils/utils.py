@@ -152,7 +152,7 @@ def path_to_data(path):
                 pre_doc_end = 0
 
         elif len(line) <= 5:
-            if len(tokens) != 0:
+            if len(labels) != 0:
                 doc_start = pre_doc_end
                 doc_end = len(tokens)
                 doc_index.append((doc_start, doc_end))
@@ -161,12 +161,15 @@ def path_to_data(path):
                 replaced_labels += boi1_to_2(labels)
                 labels = []
         else:
-            line = line.strip()
-            line = line.split()
+            line = line.strip().split()
 
             tokens.append(line[0])
             labels.append(line[-1])
 
+    if len(tokens) != 0:
+        labels = [key_to_val(la, ner_dict) for la in replaced_labels]
+        document = dict(tokens=tokens, labels=labels, doc_index=doc_index)
+        data.append(document)
     return data
 
 

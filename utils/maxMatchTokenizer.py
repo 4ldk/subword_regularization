@@ -337,7 +337,7 @@ class MaxMatchTokenizer:
             data = {
                 "input_ids": torch.tensor(input_ids, dtype=torch.int),
                 "attention_mask": torch.tensor(attention_mask, dtype=torch.int),
-                "subword_labels": torch.tensor(subword_labels, dtype=torch.int),
+                "subword_labels": torch.tensor(subword_labels, dtype=torch.long),
                 "predict_labels": torch.tensor(predict_labels, dtype=torch.int),
                 "tokens": row_tokens,
                 "labels": row_labels,

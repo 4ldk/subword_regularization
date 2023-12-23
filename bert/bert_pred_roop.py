@@ -8,7 +8,7 @@ import torch
 from round_table import round_table
 from tqdm import tqdm
 from tqdm.contrib import tzip
-from transformers import AutoModelForTokenClassification, AutoTokenizer
+from transformers import AutoModelForTokenClassification, AutoTokenizer, BertConfig
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils.maxMatchTokenizer import MaxMatchTokenizer
@@ -101,10 +101,11 @@ def main(cfg):
     loop = cfg.loop
     p = cfg.pred_p
     vote = cfg.vote
-    loop_pred(length, model_name, test, loop=loop, p=p, vote=vote)
+    local_model = cfg.local_model
+    loop_pred(length, model_name, test, loop=loop, p=p, vote=vote, local_model=local_model)
 
 
-def loop_pred(length, model_name, test, loop=100, p=0.1, vote="majority"):
+def loop_pred(length, model_name, test, loop=100, p=0.1, vote="majority", local_model=False):
     random.seed(42)
     np.random.seed(42)
     torch.manual_seed(42)
@@ -147,7 +148,13 @@ def loop_pred(length, model_name, test, loop=100, p=0.1, vote="majority"):
     bert_tokeninzer = AutoTokenizer.from_pretrained(model_name)
     mmt.loadBertTokenizer(bertTokenizer=bert_tokeninzer)
 
-    model = AutoModelForTokenClassification.from_pretrained(model_name).to(device)
+    if local_model:
+        config = BertConfig.from_pretrained(model_name, num_labels=len(ner_dict))
+        model = AutoModelForTokenClassification.from_config(config)
+        model.load_state_dict(torch.load(local_model))
+        model = model.to(device)
+    else:
+        model = AutoModelForTokenClassification.from_pretrained(model_name).to(device)
 
     model.eval()
     outputs = []

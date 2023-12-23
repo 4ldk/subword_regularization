@@ -27,70 +27,6 @@ ner_dict = {
     "PAD": 9,
 }
 
-model_dict = {
-    "O": 0,
-    "B-PER": 1,
-    "I-PER": 2,
-    "B-ORG": 3,
-    "I-ORG": 4,
-    "B-LOC": 5,
-    "I-LOC": 6,
-    "B-MISC": 7,
-    "I-MISC": 8,
-    "PAD": 9,
-}
-
-
-pos_dict = {
-    '"': 0,
-    "''": 1,
-    "#": 2,
-    "$": 3,
-    "(": 4,
-    ")": 5,
-    ",": 6,
-    ".": 7,
-    ":": 8,
-    "``": 9,
-    "CC": 10,
-    "CD": 11,
-    "DT": 12,
-    "EX": 13,
-    "FW": 14,
-    "IN": 15,
-    "JJ": 16,
-    "JJR": 17,
-    "JJS": 18,
-    "LS": 19,
-    "MD": 20,
-    "NN": 21,
-    "NNP": 22,
-    "NNPS": 23,
-    "NNS": 24,
-    "NN|SYM": 25,
-    "PDT": 26,
-    "POS": 27,
-    "PRP": 28,
-    "PRP$": 29,
-    "RB": 30,
-    "RBR": 31,
-    "RBS": 32,
-    "RP": 33,
-    "SYM": 34,
-    "TO": 35,
-    "UH": 36,
-    "VB": 37,
-    "VBD": 38,
-    "VBG": 39,
-    "VBN": 40,
-    "VBP": 41,
-    "VBZ": 42,
-    "WDT": 43,
-    "WP": 44,
-    "WP$": 45,
-    "WRB": 46,
-}
-
 
 @hydra.main(config_path="../config", config_name="conll2003", version_base="1.1")
 def main(cfg):
@@ -144,6 +80,7 @@ def train(
 
     device = "cuda"
     init_scale = 2048
+    os.makedirs("./model")
 
     mmt = MaxMatchTokenizer(ner_dict=ner_dict, p=p, padding=length)
     bert_tokeninzer = AutoTokenizer.from_pretrained(model_name)
@@ -184,13 +121,15 @@ def train(
         train_bar = tqdm(train_loader, leave=False, desc=f"Epoch{epoch} ")
         batch_loss = []
         for input, sub_input, label in train_bar:
+            input, sub_input, label = (
+                input.to("cuda"),
+                sub_input.to("cuda"),
+                label.to("cuda"),
+            )
             with torch.amp.autocast("cuda", dtype=torch.bfloat16):
-                input, sub_input, label = (
-                    input.to("cuda"),
-                    sub_input.to("cuda"),
-                    label.to("cuda"),
+                loss, logits = model(
+                    input_ids=input, token_type_ids=None, attention_mask=sub_input, labels=label, return_dict=False
                 )
-                loss = model(input_ids=input, token_type_ids=None, attention_mask=sub_input, labels=label)
 
             optimizer.zero_grad()
             scaler.scale(loss).backward()
@@ -213,13 +152,13 @@ def train(
         labels = []
         with torch.no_grad():
             for input, sub_input, label in tqdm(valid_loader, leave=False):
+                input, sub_input = (
+                    input.to("cuda"),
+                    sub_input.to("cuda"),
+                )
                 with torch.amp.autocast("cuda", dtype=torch.bfloat16):
-                    input, sub_input, label = (
-                        input.to("cuda"),
-                        sub_input.to("cuda"),
-                    )
-                    pred = model(input, sub_input)
-                pred = pred.squeeze(-1).to("cpu")
+                    pred = model(input, sub_input).logits
+                pred = pred.squeeze(-1).to("cpu").argmax(-1)
                 preds.append(pred)
                 labels.append(label)
 
