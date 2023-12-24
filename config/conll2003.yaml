@@ -15,7 +15,7 @@ model_name: "bert-base-cased"
 weight_decay: 0
 use_loss_weight: True
 use_scheduler: True
-num_warmup_steps: 50
+warmup_late: 0.01
 
 test: "2003" # 2003, 2023, crossweigh valid
 
