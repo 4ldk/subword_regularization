@@ -39,6 +39,8 @@ def main(cfg):
     seed = cfg.seed
     model_name = cfg.model_name
 
+    weight_decay = cfg.weight_decay
+    use_loss_weight = cfg.use_loss_weight
     use_scheduler = cfg.use_scheduler
     num_warmup_steps = cfg.num_warmup_steps
 
@@ -50,8 +52,10 @@ def main(cfg):
         p,
         seed,
         model_name,
-        use_scheduler,
-        num_warmup_steps,
+        weight_decay=weight_decay,
+        use_loss_weight=use_loss_weight,
+        use_scheduler=use_scheduler,
+        num_warmup_steps=num_warmup_steps,
     )
 
 
@@ -63,6 +67,8 @@ def train(
     p,
     seed,
     model_name,
+    weight_decay=0,
+    use_loss_weight=False,
     use_scheduler=False,
     num_warmup_steps=10000,
 ):
@@ -73,7 +79,7 @@ def train(
     torch.backends.cudnn.deterministic = True
 
     device = "cuda"
-    init_scale = 2048
+    init_scale = 4096
     os.makedirs("./model")
 
     mmt = MaxMatchTokenizer(ner_dict=ner_dict, p=p, padding=length)
@@ -81,92 +87,40 @@ def train(
     mmt.loadBertTokenizer(bertTokenizer=bert_tokeninzer)
 
     train_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.train")
-    train_data = mmt.dataset_encode(train_dataset, p=p)
+    train_data = mmt.dataset_encode(train_dataset, p=p, subword_label="PAD")
     train_loader = get_dataloader(train_data, batch_size=batch_size, shuffle=True)
 
     valid_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.testa")
-    valid_data = mmt.dataset_encode(valid_dataset, p=0)
+    valid_data = mmt.dataset_encode(valid_dataset, p=0, subword_label="PAD")
     valid_loader = get_dataloader(valid_data, batch_size=batch_size, shuffle=True)
+
+    test_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.testa")
+    test_data = mmt.dataset_encode(test_dataset, p=0, subword_label="PAD")
+    test_loader = get_dataloader(test_data, batch_size=batch_size, shuffle=True)
 
     print("Dataset Loaded")
 
-    model = AutoModelForTokenClassification.from_pretrained(model_name, num_labels=len(ner_dict)).to(device)
+    weight = train_data["weight"].to(device) if use_loss_weight else None
+    num_training_steps = len(train_loader) * num_epoch
 
-    optimizer = optim.Adam(
-        model.parameters(),
-        lr=lr,
-        betas=(0.9, 0.999),
-        weight_decay=0,  # .01,
-        amsgrad=True,
+    net = model_train(
+        model_name, device, lr, weight_decay, weight, init_scale, num_warmup_steps, num_training_steps, use_scheduler
     )
-    loss_func = nn.CrossEntropyLoss(weight=train_data["weight"].to(device), ignore_index=ner_dict["PAD"])
-    scaler = torch.cuda.amp.GradScaler(init_scale=init_scale)
-    if use_scheduler:
-        scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps, len(train_loader) * num_epoch)
 
     f1s = []
     losses = []
-    for epoch in range(num_epoch):
-        model.train()
-        train_bar = tqdm(train_loader, leave=False, desc=f"Epoch{epoch} ")
-        batch_loss = []
-        for input, sub_input, label in train_bar:
-            input, sub_input, label = (
-                input.to(device),
-                sub_input.to(device),
-                label.to(device),
-            )
-            with torch.amp.autocast(device, dtype=torch.bfloat16):
-                logits = model(input, sub_input).logits
-                loss = loss_func(logits.view(-1, len(ner_dict)), label.view(-1))
+    for epoch in tqdm(range(num_epoch)):
+        loss, _, _ = net.step(epoch, train_loader, train=True)
+        _, valid_acc, valid_f1 = net.step(epoch, valid_loader, train=False)
+        _, _, test_f1 = net.step(epoch, test_loader, train=False)
 
-            optimizer.zero_grad()
-            scaler.scale(loss).backward()
-            scaler.unscale_(optimizer)
-            nn.utils.clip_grad_norm_(model.parameters(), 0.1)
-            scaler.step(optimizer)
-            optimizer.step()
-            scaler.update()
+        f1s.append(valid_f1)
+        losses.append(loss)
+        tqdm.write(
+            f"Epoch{epoch}: loss: {loss}, val_acc: {valid_acc:.4f}, val_f1: {valid_f1:.4f}, tes_f1: {test_f1:.4f}"
+        )
 
-            if use_scheduler:
-                scheduler.step()
-
-            train_bar.set_postfix(loss=loss.to("cpu").item())
-            batch_loss.append(loss.to("cpu").item())
-
-        losses.append(sum(batch_loss) / len(batch_loss))
-
-        model.eval()
-        preds = []
-        labels = []
-        with torch.no_grad():
-            for input, sub_input, label in tqdm(valid_loader, leave=False):
-                input, sub_input = (
-                    input.to(device),
-                    sub_input.to(device),
-                )
-                with torch.amp.autocast(device, dtype=torch.bfloat16):
-                    pred = model(input, sub_input).logits
-                pred = pred.squeeze(-1).to("cpu").argmax(-1)
-                preds.append(pred)
-                labels.append(label)
-
-            preds = torch.concatenate(preds)
-            labels = torch.concatenate(labels)
-            pad = torch.logical_not((torch.ones_like(labels) * ner_dict["PAD"] == labels))
-            data_num = ((labels == labels) * pad).sum()
-            acc = ((preds == labels) * pad).sum().item() / data_num
-            preds = preds.view(-1)
-            labels = labels.view(-1)
-            f1 = f1_score(labels, preds, skip=ner_dict["PAD"]).tolist()
-            f1s.append(f1)
-
-        print(f"Epoch{epoch}: train_loss: {sum(batch_loss) / len(batch_loss)}, acc: {acc}, f1: {f1}")
-
-        save_path = f"./model/epoch{epoch}.pth"
-        torch.save(model.state_dict(), save_path)
-
-        if epoch != num_epoch - 1:
+        if epoch != num_epoch - 1 and p != 0:
             train_data = mmt.dataset_encode(train_dataset, p=p)
             train_loader = get_dataloader(train_data, batch_size=batch_size, shuffle=True)
 
@@ -186,6 +140,112 @@ def train(
 
         print(f"best_epoch: {best_epoch}")
         shutil.copy(f"./model/epoch{best_epoch}.pth", "./model/best.pth")
+
+
+class model_train:
+    def __init__(
+        self,
+        model_name,
+        device,
+        lr,
+        weight_decay,
+        weight,
+        init_scale,
+        num_warmup_steps,
+        num_training_steps,
+        use_scheduler,
+    ):
+        self.model = AutoModelForTokenClassification.from_pretrained(model_name, num_labels=len(ner_dict)).to(device)
+
+        self.optimizer = optim.Adam(
+            self.model.parameters(),
+            lr=lr,
+            betas=(0.9, 0.999),
+            weight_decay=weight_decay,
+            amsgrad=True,
+        )
+        self.loss_func = nn.CrossEntropyLoss(weight=weight, ignore_index=ner_dict["PAD"])
+        self.scaler = torch.cuda.amp.GradScaler(init_scale=init_scale)
+        if use_scheduler:
+            self.scheduler = get_linear_schedule_with_warmup(self.optimizer, num_warmup_steps, num_training_steps)
+
+        self.device = device
+        self.use_scheduler = use_scheduler
+
+    def step(self, epoch, loader, train=True):
+        if train:
+            self.model.train()
+        else:
+            self.model.eval()
+        bar = tqdm(loader, leave=False, desc=f"Epoch{epoch} ")
+        batch_loss, preds, labels = [], [], []
+        final_loss, acc, f1 = 0, 0, 0
+
+        for input, sub_input, label in bar:
+            input, sub_input, label = (
+                input.to(self.device),
+                sub_input.to(self.device),
+                label.to(self.device),
+            )
+
+            if train:
+                with torch.amp.autocast(self.device, dtype=torch.bfloat16):
+                    logits, loss, pred = self.forward(input, sub_input, label)
+                self.backward(loss)
+                batch_loss.append(loss.to("cpu").item())
+            else:
+                with torch.no_grad():
+                    with torch.amp.autocast(self.device, dtype=torch.bfloat16):
+                        logits, loss, pred = self.forward(input, sub_input, label)
+                    preds.append(pred)
+                    labels.append(label.to("cpu"))
+
+            bar.set_postfix(loss=loss.to("cpu").item())
+
+        if train:
+            final_loss = sum(batch_loss) / len(batch_loss)
+            save_path = f"./model/epoch{epoch}.pth"
+            torch.save(self.model.state_dict(), save_path)
+        else:
+            acc, f1 = self.get_score(preds, labels)
+        return final_loss, acc, f1
+
+    def backward(self, loss):
+        self.optimizer.zero_grad()
+        self.scaler.scale(loss).backward()
+        self.scaler.unscale_(self.optimizer)
+        nn.utils.clip_grad_norm_(self.model.parameters(), 0.1)
+        self.scaler.step(self.optimizer)
+        self.optimizer.step()
+        self.scaler.update()
+
+        if self.use_scheduler:
+            self.scheduler.step()
+
+    def get_score(self, preds, labels):
+        preds = torch.concatenate(preds)
+        labels = torch.concatenate(labels)
+
+        pad = torch.logical_not((torch.ones_like(labels) * ner_dict["PAD"] == labels))
+        data_num = ((labels == labels) * pad).sum()
+
+        acc = ((preds == labels) * pad).sum().item() / data_num
+
+        preds = preds.view(-1)
+        labels = labels.view(-1)
+        f1 = f1_score(labels, preds, skip=ner_dict["PAD"]).tolist()
+
+        return acc, f1
+
+    def forward(self, input, sub_input, label):
+        logits = self.model(input, sub_input).logits
+        pred = logits.squeeze(-1).argmax(-1)
+
+        if label is not None:
+            loss = self.loss_func(logits.view(-1, len(ner_dict)), label.view(-1))
+            return logits, pred.to("cpu"), loss
+
+        return logits, pred.to("cpu")
 
 
 if __name__ == "__main__":
