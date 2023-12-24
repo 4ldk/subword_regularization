@@ -190,13 +190,13 @@ class model_train:
 
             if train:
                 with torch.amp.autocast(self.device, dtype=torch.bfloat16):
-                    logits, loss, pred = self.forward(input, sub_input, label)
+                    logits, pred, loss = self.forward(input, sub_input, label)
                 self.backward(loss)
                 batch_loss.append(loss.to("cpu").item())
             else:
                 with torch.no_grad():
                     with torch.amp.autocast(self.device, dtype=torch.bfloat16):
-                        logits, loss, pred = self.forward(input, sub_input, label)
+                        logits, pred, loss = self.forward(input, sub_input, label)
                     preds.append(pred)
                     labels.append(label.to("cpu"))
 
