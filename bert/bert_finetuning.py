@@ -42,7 +42,7 @@ def main(cfg):
     weight_decay = cfg.weight_decay
     use_loss_weight = cfg.use_loss_weight
     use_scheduler = cfg.use_scheduler
-    num_warmup_steps = cfg.num_warmup_steps
+    warmup_late = cfg.warmup_late
 
     train(
         batch_size,
@@ -55,7 +55,7 @@ def main(cfg):
         weight_decay=weight_decay,
         use_loss_weight=use_loss_weight,
         use_scheduler=use_scheduler,
-        num_warmup_steps=num_warmup_steps,
+        warmup_late=warmup_late,
     )
 
 
@@ -70,7 +70,7 @@ def train(
     weight_decay=0,
     use_loss_weight=False,
     use_scheduler=False,
-    num_warmup_steps=10000,
+    warmup_late=0.01,
 ):
     random.seed(seed)
     np.random.seed(seed)
@@ -102,6 +102,7 @@ def train(
 
     weight = train_data["weight"].to(device) if use_loss_weight else None
     num_training_steps = len(train_loader) * num_epoch
+    num_warmup_steps = int(num_training_steps * warmup_late)
 
     net = model_train(
         model_name, device, lr, weight_decay, weight, init_scale, num_warmup_steps, num_training_steps, use_scheduler
