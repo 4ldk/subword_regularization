@@ -94,7 +94,7 @@ def train(
     valid_data = mmt.dataset_encode(valid_dataset, p=0, subword_label="PAD")
     valid_loader = get_dataloader(valid_data, batch_size=batch_size, shuffle=True)
 
-    test_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.testa")
+    test_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.testb")
     test_data = mmt.dataset_encode(test_dataset, p=0, subword_label="PAD")
     test_loader = get_dataloader(test_data, batch_size=batch_size, shuffle=True)
 
