@@ -12,12 +12,12 @@ seed: 42
 device: "cuda"
 model_name: "bert-base-cased"
 
-use_scheduler: False
-num_warmup_steps: 300
+use_scheduler: True
+num_warmup_steps: 50
 
 test: "2003" # 2003, 2023, crossweigh valid
 
-local_model: "C:\\Users\\chenr\\Desktop\\python\\subword_regularization\\outputs\\bert_finetuning\\2023-12-23\\23-17-23\\model\\epoch4.pth"
+local_model: "C:\\Users\\chenr\\Desktop\\python\\subword_regularization\\outputs\\bert_finetuning\\2023-12-24\\14-42-20\\model\\epoch4.pth"
 loop: 1
 pred_p: 0
 vote: majority

@@ -96,9 +96,10 @@ def train(
         model.parameters(),
         lr=lr,
         betas=(0.9, 0.999),
-        weight_decay=0.01,
+        weight_decay=0,  # .01,
         amsgrad=True,
     )
+    loss_func = nn.CrossEntropyLoss(weight=train_data["weight"].to(device), ignore_index=ner_dict["PAD"])
     scaler = torch.cuda.amp.GradScaler(init_scale=init_scale)
     if use_scheduler:
         scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps, len(train_loader) * num_epoch)
@@ -111,14 +112,13 @@ def train(
         batch_loss = []
         for input, sub_input, label in train_bar:
             input, sub_input, label = (
-                input.to("cuda"),
-                sub_input.to("cuda"),
-                label.to("cuda"),
+                input.to(device),
+                sub_input.to(device),
+                label.to(device),
             )
-            with torch.amp.autocast("cuda", dtype=torch.bfloat16):
-                loss, logits = model(
-                    input_ids=input, token_type_ids=None, attention_mask=sub_input, labels=label, return_dict=False
-                )
+            with torch.amp.autocast(device, dtype=torch.bfloat16):
+                logits = model(input, sub_input).logits
+                loss = loss_func(logits.view(-1, len(ner_dict)), label.view(-1))
 
             optimizer.zero_grad()
             scaler.scale(loss).backward()
@@ -142,10 +142,10 @@ def train(
         with torch.no_grad():
             for input, sub_input, label in tqdm(valid_loader, leave=False):
                 input, sub_input = (
-                    input.to("cuda"),
-                    sub_input.to("cuda"),
+                    input.to(device),
+                    sub_input.to(device),
                 )
-                with torch.amp.autocast("cuda", dtype=torch.bfloat16):
+                with torch.amp.autocast(device, dtype=torch.bfloat16):
                     pred = model(input, sub_input).logits
                 pred = pred.squeeze(-1).to("cpu").argmax(-1)
                 preds.append(pred)
@@ -166,8 +166,9 @@ def train(
         save_path = f"./model/epoch{epoch}.pth"
         torch.save(model.state_dict(), save_path)
 
-        train_data = mmt.dataset_encode(train_dataset, p=p)
-        train_loader = get_dataloader(train_data, batch_size=batch_size, shuffle=True)
+        if epoch != num_epoch - 1:
+            train_data = mmt.dataset_encode(train_dataset, p=p)
+            train_loader = get_dataloader(train_data, batch_size=batch_size, shuffle=True)
 
     with open("./train_valid_score.csv", "w") as f:
         min_loss = 100

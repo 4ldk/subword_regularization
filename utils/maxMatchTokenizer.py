@@ -3,6 +3,7 @@ import random
 
 import torch
 from transformers import AutoTokenizer
+from sklearn.utils.class_weight import compute_sample_weight
 
 
 class MaxMatchTokenizer:
@@ -226,6 +227,7 @@ class MaxMatchTokenizer:
         attention_mask = []
         subword_labels = []
         predict_labels = []
+        weight_y = []
         for document in data:
             text = document["tokens"]
             labels = document["labels"]
@@ -299,6 +301,12 @@ class MaxMatchTokenizer:
                 masked_label_ids = self.get_label(masked_ids, masked_label, "PAD")
                 predict_labels.append(masked_label_ids)
 
+                weight_y += [l_i for l_i in label_ids if l_i != self.ner_dict["PAD"]]
+
+        loss_rate = compute_sample_weight("balanced", y=weight_y)
+        weight = [loss_rate[weight_y.index(i)] for i in range(len(set(weight_y)))]
+        weight.append(0)
+
         if return_tensor:
             data = {
                 "input_ids": torch.tensor(input_ids, dtype=torch.int),
@@ -307,6 +315,7 @@ class MaxMatchTokenizer:
                 "predict_labels": torch.tensor(predict_labels, dtype=torch.int),
                 "tokens": row_tokens,
                 "labels": row_labels,
+                "weight": torch.tensor(weight, dtype=torch.float32),
             }
         else:
             data = {
@@ -316,6 +325,7 @@ class MaxMatchTokenizer:
                 "predict_labels": predict_labels,
                 "tokens": row_tokens,
                 "labels": row_labels,
+                "weight": weight,
             }
         return data
 
