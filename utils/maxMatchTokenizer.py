@@ -242,7 +242,7 @@ class MaxMatchTokenizer:
                 row_labels.append(labels[i:j])
                 masked_ids = copy.deepcopy(word_ids)
 
-                if pre_sentence_padding:
+                if post_sentence_padding:
                     while len(subwords) < max_length and j < len(text):
                         if add_sep_between_sentences and j in [d[0] for d in document["doc_index"]]:
                             subwords = subwords + [self.sepToken]
@@ -258,7 +258,7 @@ class MaxMatchTokenizer:
                             word_ids = word_ids[:max_length]
                             masked_ids = masked_ids[:max_length]
 
-                if post_sentence_padding:
+                if pre_sentence_padding:
                     while len(subwords) < max_length and i > 0:
                         if add_sep_between_sentences and i in [d[1] for d in document["doc_index"]]:
                             subwords = [self.sepToken] + subwords

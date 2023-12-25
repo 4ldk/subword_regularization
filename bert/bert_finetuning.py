@@ -6,9 +6,9 @@ import sys
 import hydra
 import numpy as np
 import torch
-from torch import nn
+from torch import nn, optim
 from tqdm import tqdm
-from transformers import AutoModelForTokenClassification, AutoTokenizer, get_linear_schedule_with_warmup, AdamW
+from transformers import AutoModelForTokenClassification, AutoTokenizer, get_linear_schedule_with_warmup
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils.maxMatchTokenizer import MaxMatchTokenizer
@@ -99,15 +99,36 @@ def train(
     mmt.loadBertTokenizer(bertTokenizer=bert_tokeninzer)
 
     train_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.train")
-    train_data = mmt.dataset_encode(train_dataset, p=p, subword_label="PAD")
+    train_data = mmt.dataset_encode(
+        train_dataset,
+        p=p,
+        subword_label="PAD",
+        pre_sentence_padding=pre_sentence_padding,
+        post_sentence_padding=post_sentence_padding,
+        add_sep_between_sentences=add_sep_between_sentences,
+    )
     train_loader = get_dataloader(train_data, batch_size=batch_size, shuffle=True)
 
     valid_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.testa")
-    valid_data = mmt.dataset_encode(valid_dataset, p=0, subword_label="PAD")
+    valid_data = mmt.dataset_encode(
+        valid_dataset,
+        p=0,
+        subword_label="PAD",
+        pre_sentence_padding=pre_sentence_padding,
+        post_sentence_padding=post_sentence_padding,
+        add_sep_between_sentences=add_sep_between_sentences,
+    )
     valid_loader = get_dataloader(valid_data, batch_size=batch_size, shuffle=False, drop_last=False)
 
     test_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.testb")
-    test_data = mmt.dataset_encode(test_dataset, p=0, subword_label="PAD")
+    test_data = mmt.dataset_encode(
+        test_dataset,
+        p=0,
+        subword_label="PAD",
+        pre_sentence_padding=pre_sentence_padding,
+        post_sentence_padding=post_sentence_padding,
+        add_sep_between_sentences=add_sep_between_sentences,
+    )
     test_loader = get_dataloader(test_data, batch_size=batch_size, shuffle=False, drop_last=False)
 
     print("Dataset Loaded")
@@ -164,7 +185,7 @@ class trainer:
             },
             {"params": [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], "weight_decay": 0.0},
         ]
-        self.optimizer = AdamW(optimizer_grouped_parameters, lr=lr)
+        self.optimizer = optim.AdamW(optimizer_grouped_parameters, lr=lr)
 
         self.loss_func = nn.CrossEntropyLoss(weight=weight, ignore_index=ner_dict["PAD"])
         self.scaler = torch.cuda.amp.GradScaler(init_scale=init_scale)
