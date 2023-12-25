@@ -14,13 +14,17 @@ model_name: "bert-large-cased"
 
 accum_iter: 16
 weight_decay: 0.01
-use_loss_weight: True
+use_loss_weight: False
 use_scheduler: True
 warmup_late: 0.1
 
+pre_sentence_padding: False
+post_sentence_padding: True
+add_sep_between_sentences: True
+
 test: "2003" # 2003, 2023, crossweigh valid
 
-local_model: "C:\\Users\\chenr\\Desktop\\python\\subword_regularization\\outputs\\bert_finetuning\\2023-12-25\\03-34-05\\model\\epoch49.pth"
+local_model: "C:\\Users\\chenr\\Desktop\\python\\subword_regularization\\outputs\\bert_finetuning\\2023-12-25\\15-14-22\\model\\epoch4.pth"
 loop: 1
 pred_p: 0
 vote: majority

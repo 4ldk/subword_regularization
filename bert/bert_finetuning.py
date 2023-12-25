@@ -45,6 +45,9 @@ def main(cfg):
     use_scheduler = cfg.use_scheduler
     warmup_late = cfg.warmup_late
 
+    pre_sentence_padding = cfg.pre_sentence_padding
+    post_sentence_padding = cfg.post_sentence_padding
+    add_sep_between_sentences = cfg.add_sep_between_sentences
     train(
         batch_size,
         lr,
@@ -58,6 +61,9 @@ def main(cfg):
         use_loss_weight=use_loss_weight,
         use_scheduler=use_scheduler,
         warmup_late=warmup_late,
+        pre_sentence_padding=pre_sentence_padding,
+        post_sentence_padding=post_sentence_padding,
+        add_sep_between_sentences=add_sep_between_sentences,
     )
 
 
@@ -74,6 +80,9 @@ def train(
     use_loss_weight=False,
     use_scheduler=False,
     warmup_late=0.01,
+    pre_sentence_padding=False,
+    post_sentence_padding=False,
+    add_sep_between_sentences=False,
 ):
     random.seed(seed)
     np.random.seed(seed)
@@ -118,6 +127,9 @@ def train(
         num_training_steps=num_training_steps,
         use_scheduler=use_scheduler,
         init_scale=init_scale,
+        pre_sentence_padding=pre_sentence_padding,
+        post_sentence_padding=post_sentence_padding,
+        add_sep_between_sentences=add_sep_between_sentences,
         device=device,
     )
     net.train(mmt, train_dataset, train_loader, num_epoch, valid_loader=valid_loader, test_loader=test_loader, mmt_p=p)
@@ -136,6 +148,9 @@ class trainer:
         num_training_steps=None,
         use_scheduler=False,
         init_scale=4096,
+        pre_sentence_padding=False,
+        post_sentence_padding=False,
+        add_sep_between_sentences=False,
         device="cuda",
     ):
         self.model = AutoModelForTokenClassification.from_pretrained(model_name, num_labels=len(ner_dict)).to(device)
@@ -160,6 +175,9 @@ class trainer:
         self.batch_size = batch_size
         self.use_scheduler = use_scheduler
         self.accum_iter = accum_iter
+        self.pre_sentence_padding = pre_sentence_padding
+        self.post_sentence_padding = post_sentence_padding
+        self.add_sep_between_sentences = add_sep_between_sentences
 
     def forward(self, input, sub_input, label):
         logits = self.model(input, sub_input).logits
@@ -186,7 +204,13 @@ class trainer:
             )
 
             if epoch != num_epoch - 1 and mmt_p != 0:
-                train_data = mmt.dataset_encode(train_dataset, p=mmt_p)
+                train_data = mmt.dataset_encode(
+                    train_dataset,
+                    p=mmt_p,
+                    pre_sentence_padding=self.pre_sentence_padding,
+                    post_sentence_padding=self.post_sentence_padding,
+                    add_sep_between_sentences=self.add_sep_between_sentences,
+                )
                 train_loader = get_dataloader(train_data, batch_size=self.batch_size, shuffle=True)
 
         with open("./train_valid_score.csv", "w") as f:

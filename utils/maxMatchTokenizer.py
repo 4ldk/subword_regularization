@@ -210,6 +210,9 @@ class MaxMatchTokenizer:
         p=False,
         return_tensor=True,
         subword_label="I",
+        pre_sentence_padding=False,
+        post_sentence_padding=False,
+        add_sep_between_sentences=False,
     ):
         p = p if p else self.p
 
@@ -239,35 +242,37 @@ class MaxMatchTokenizer:
                 row_labels.append(labels[i:j])
                 masked_ids = copy.deepcopy(word_ids)
 
-                while len(subwords) < max_length and j < len(text):
-                    if j in [d[0] for d in document["doc_index"]]:
-                        subwords = subwords + [self.sepToken]
-                        word_ids = word_ids + [None]
-                        masked_ids = masked_ids + [None]
-                    ex_subwords = self.tokenizeWord(text[j])
-                    subwords = subwords + ex_subwords
-                    word_ids = word_ids + [max_with_none(word_ids) + 1] * len(ex_subwords)
-                    masked_ids = masked_ids + [None] * len(ex_subwords)
-                    j += 1
-                    if len(subwords) < max_length:
-                        subwords = subwords[:max_length]
-                        word_ids = word_ids[:max_length]
-                        masked_ids = masked_ids[:max_length]
+                if pre_sentence_padding:
+                    while len(subwords) < max_length and j < len(text):
+                        if add_sep_between_sentences and j in [d[0] for d in document["doc_index"]]:
+                            subwords = subwords + [self.sepToken]
+                            word_ids = word_ids + [None]
+                            masked_ids = masked_ids + [None]
+                        ex_subwords = self.tokenizeWord(text[j])
+                        subwords = subwords + ex_subwords
+                        word_ids = word_ids + [max_with_none(word_ids) + 1] * len(ex_subwords)
+                        masked_ids = masked_ids + [None] * len(ex_subwords)
+                        j += 1
+                        if len(subwords) < max_length:
+                            subwords = subwords[:max_length]
+                            word_ids = word_ids[:max_length]
+                            masked_ids = masked_ids[:max_length]
 
-                while len(subwords) < max_length and i > 0:
-                    if i in [d[1] for d in document["doc_index"]]:
-                        subwords = [self.sepToken] + subwords
-                        word_ids = [None] + word_ids
-                        masked_ids = [None] + masked_ids
-                    i -= 1
-                    ex_subwords = self.tokenizeWord(text[i])
-                    subwords = ex_subwords + subwords
-                    word_ids = [min_with_none(word_ids) - 1] * len(ex_subwords) + word_ids
-                    masked_ids = [None] * len(ex_subwords) + masked_ids
-                    if len(subwords) < max_length:
-                        subwords = subwords[-max_length:]
-                        word_ids = word_ids[:max_length]
-                        masked_ids = masked_ids[:max_length]
+                if post_sentence_padding:
+                    while len(subwords) < max_length and i > 0:
+                        if add_sep_between_sentences and i in [d[1] for d in document["doc_index"]]:
+                            subwords = [self.sepToken] + subwords
+                            word_ids = [None] + word_ids
+                            masked_ids = [None] + masked_ids
+                        i -= 1
+                        ex_subwords = self.tokenizeWord(text[i])
+                        subwords = ex_subwords + subwords
+                        word_ids = [min_with_none(word_ids) - 1] * len(ex_subwords) + word_ids
+                        masked_ids = [None] * len(ex_subwords) + masked_ids
+                        if len(subwords) < max_length:
+                            subwords = subwords[-max_length:]
+                            word_ids = word_ids[:max_length]
+                            masked_ids = masked_ids[:max_length]
 
                 subwords = [self.clsTokenId] + [self.word2id[w] for w in subwords] + [self.sepTokenId]
                 word_ids = [None] + word_ids + [None]
