@@ -228,6 +228,7 @@ class MaxMatchTokenizer:
         row_labels = []
         input_ids = []
         attention_mask = []
+        token_type_ids = []
         subword_labels = []
         predict_labels = []
         weight_y = []
@@ -241,7 +242,7 @@ class MaxMatchTokenizer:
                 row_tokens.append(text[i:j])
                 row_labels.append(labels[i:j])
                 masked_ids = copy.deepcopy(word_ids)
-                token_type_ids = [0] * len(subwords)
+                token_type_id = [0] * len(subwords)
 
                 if post_sentence_padding:
                     while len(subwords) < max_length and j < len(text):
@@ -249,18 +250,18 @@ class MaxMatchTokenizer:
                             subwords.append(self.sepToken)
                             word_ids.append(None)
                             masked_ids.append(None)
-                            token_type_ids.append(token_type_ids[-1])
+                            token_type_id.append(token_type_id[-1])
                         ex_subwords = self.tokenizeWord(text[j])
                         subwords = subwords + ex_subwords
                         word_ids = word_ids + [max_with_none(word_ids) + 1] * len(ex_subwords)
                         masked_ids = masked_ids + [None] * len(ex_subwords)
-                        token_type_ids = token_type_ids + [1] * len(ex_subwords)
+                        token_type_id = token_type_id + [1] * len(ex_subwords)
                         j += 1
                         if len(subwords) < max_length:
                             subwords = subwords[:max_length]
                             word_ids = word_ids[:max_length]
                             masked_ids = masked_ids[:max_length]
-                            token_type_ids = token_type_ids[:max_length]
+                            token_type_id = token_type_id[:max_length]
 
                 if pre_sentence_padding:
                     while len(subwords) < max_length and i > 0:
@@ -268,18 +269,18 @@ class MaxMatchTokenizer:
                             subwords = [self.sepToken] + subwords
                             word_ids = [None] + word_ids
                             masked_ids = [None] + masked_ids
-                            token_type_ids = [0] + token_type_ids
+                            token_type_id = [0] + token_type_id
                         i -= 1
                         ex_subwords = self.tokenizeWord(text[i])
                         subwords = ex_subwords + subwords
                         word_ids = [min_with_none(word_ids) - 1] * len(ex_subwords) + word_ids
                         masked_ids = [None] * len(ex_subwords) + masked_ids
-                        token_type_ids = [0] * len(ex_subwords) + token_type_ids
+                        token_type_id = [0] * len(ex_subwords) + token_type_id
                         if len(subwords) < max_length:
                             subwords = subwords[-max_length:]
                             word_ids = word_ids[-max_length:]
                             masked_ids = masked_ids[-max_length:]
-                            token_type_ids = token_type_ids[-max_length:]
+                            token_type_id = token_type_id[-max_length:]
 
                 subwords = [self.clsTokenId] + [self.word2id[w] for w in subwords] + [self.sepTokenId]
                 word_ids = [None] + word_ids + [None]
@@ -290,7 +291,7 @@ class MaxMatchTokenizer:
                         subwords = subwords[: self.padding]
                         word_ids = word_ids[: self.padding]
                         masked_ids = masked_ids[: self.padding]
-                        token_type_ids = token_type_ids[: self.padding]
+                        token_type_id = token_type_id[: self.padding]
                         mask = [1] * self.padding
 
                     else:
@@ -299,13 +300,14 @@ class MaxMatchTokenizer:
                         subwords += [self.padTokenId] * pad_len
                         word_ids += [None] * pad_len
                         masked_ids += [None] * pad_len
-                        token_type_ids += [1] * pad_len
+                        token_type_id += [1] * pad_len
                         mask = [1] * attention_len + [0] * pad_len
                 else:
                     mask = [1] * len(subwords)
 
                 input_ids.append(subwords)
                 attention_mask.append(mask)
+                token_type_ids.append(token_type_id)
 
                 label = labels[i:j]
                 word_ids = [w_i - min_with_none(word_ids) if w_i is not None else None for w_i in word_ids]
