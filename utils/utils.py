@@ -70,7 +70,7 @@ def get_texts_and_labels(dataset):
     return data
 
 
-def get_dataloader(data, batch_size, shuffle=True):
+def get_dataloader(data, batch_size, shuffle=True, drop_last=True):
     ids, mask, labels = (
         data["input_ids"],
         data["attention_mask"],
@@ -81,7 +81,7 @@ def get_dataloader(data, batch_size, shuffle=True):
         dataset,
         batch_size=batch_size,
         shuffle=shuffle,
-        drop_last=True,
+        drop_last=drop_last,
     )
     return dataloader
 

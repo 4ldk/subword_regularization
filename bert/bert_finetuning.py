@@ -95,11 +95,11 @@ def train(
 
     valid_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.testa")
     valid_data = mmt.dataset_encode(valid_dataset, p=0, subword_label="PAD")
-    valid_loader = get_dataloader(valid_data, batch_size=batch_size, shuffle=True)
+    valid_loader = get_dataloader(valid_data, batch_size=batch_size, shuffle=True, drop_last=False)
 
     test_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.testb")
     test_data = mmt.dataset_encode(test_dataset, p=0, subword_label="PAD")
-    test_loader = get_dataloader(test_data, batch_size=batch_size, shuffle=True)
+    test_loader = get_dataloader(test_data, batch_size=batch_size, shuffle=True, drop_last=False)
 
     print("Dataset Loaded")
 
@@ -107,7 +107,7 @@ def train(
     num_training_steps = int(len(train_loader) / accum_iter) * num_epoch
     num_warmup_steps = int(num_training_steps * warmup_late)
 
-    net = model_train(
+    net = trainer(
         model_name,
         device,
         lr,
@@ -119,55 +119,23 @@ def train(
         use_scheduler,
         init_scale,
     )
-
-    f1s = []
-    losses = []
-    for epoch in tqdm(range(num_epoch)):
-        loss, _, _ = net.step(epoch, train_loader, train=True)
-        _, valid_acc, valid_f1 = net.step(epoch, valid_loader, train=False)
-        _, _, test_f1 = net.step(epoch, test_loader, train=False)
-
-        f1s.append(valid_f1)
-        losses.append(loss)
-        tqdm.write(
-            f"Epoch{epoch}: loss: {loss}, val_acc: {valid_acc:.4f}, val_f1: {valid_f1:.4f}, tes_f1: {test_f1:.4f}"
-        )
-
-        if epoch != num_epoch - 1 and p != 0:
-            train_data = mmt.dataset_encode(train_dataset, p=p)
-            train_loader = get_dataloader(train_data, batch_size=batch_size, shuffle=True)
-
-    with open("./train_valid_score.csv", "w") as f:
-        min_loss = 100
-        max_f1 = 0
-        best_epoch = 0
-        for i, (loss, f1) in enumerate(zip(losses, f1s)):
-            f.write(f"{i}, {loss}, {f1}\n")
-            if f1 > max_f1:
-                max_f1 = f1
-                best_epoch = i
-            elif f1 == max_f1:
-                if loss < min_loss:
-                    min_loss = loss
-                    best_epoch = i
-
-        print(f"best_epoch: {best_epoch}")
-        shutil.copy(f"./model/epoch{best_epoch}.pth", "./model/best.pth")
+    net.train(mmt, train_dataset, train_loader, num_epoch, valid_loader=valid_loader, test_loader=test_loader, mmt_p=p)
 
 
-class model_train:
+class trainer:
     def __init__(
         self,
-        model_name,
-        device,
-        lr,
-        accum_iter,
-        weight_decay,
-        weight,
-        num_warmup_steps,
-        num_training_steps,
-        use_scheduler,
-        init_scale,
+        model_name="bert-base-cased",
+        device="cuda",
+        lr=1e-5,
+        batch_size=16,
+        accum_iter=2,
+        weight_decay=0.01,
+        weight=False,
+        num_warmup_steps=None,
+        num_training_steps=None,
+        use_scheduler=False,
+        init_scale=4096,
     ):
         self.model = AutoModelForTokenClassification.from_pretrained(model_name, num_labels=len(ner_dict)).to(device)
 
@@ -184,8 +152,54 @@ class model_train:
             self.scheduler = get_linear_schedule_with_warmup(self.optimizer, num_warmup_steps, num_training_steps)
 
         self.device = device
+        self.batch_size = batch_size
         self.use_scheduler = use_scheduler
         self.accum_iter = accum_iter
+
+    def forward(self, input, sub_input, label):
+        logits = self.model(input, sub_input).logits
+        pred = logits.squeeze(-1).argmax(-1)
+
+        if label is not None:
+            loss = self.loss_func(logits.view(-1, len(ner_dict)), label.view(-1))
+            return logits, pred.to("cpu"), loss
+
+        return logits, pred.to("cpu")
+
+    def train(self, mmt, train_dataset, train_loader, num_epoch, valid_loader=None, test_loader=None, mmt_p=0):
+        f1s = []
+        losses = []
+        for epoch in tqdm(range(num_epoch)):
+            loss, _, _ = self.step(epoch, train_loader, train=True)
+            _, valid_acc, valid_f1 = self.step(epoch, valid_loader, train=False)
+            _, _, test_f1 = self.step(epoch, test_loader, train=False)
+
+            f1s.append(valid_f1)
+            losses.append(loss)
+            tqdm.write(
+                f"Epoch{epoch}: loss: {loss}, val_acc: {valid_acc:.4f}, val_f1: {valid_f1:.4f}, tes_f1: {test_f1:.4f}"
+            )
+
+            if epoch != num_epoch - 1 and mmt_p != 0:
+                train_data = mmt.dataset_encode(train_dataset, p=mmt_p)
+                train_loader = get_dataloader(train_data, batch_size=self.batch_size, shuffle=True)
+
+        with open("./train_valid_score.csv", "w") as f:
+            min_loss = 100
+            max_f1 = 0
+            best_epoch = 0
+            for i, (loss, f1) in enumerate(zip(losses, f1s)):
+                f.write(f"{i}, {loss}, {f1}\n")
+                if f1 > max_f1:
+                    max_f1 = f1
+                    best_epoch = i
+                elif f1 == max_f1:
+                    if loss < min_loss:
+                        min_loss = loss
+                        best_epoch = i
+
+            print(f"best_epoch: {best_epoch}")
+            shutil.copy(f"./model/epoch{best_epoch}.pth", "./model/best.pth")
 
     def step(self, epoch, loader, train=True):
         if train:
@@ -250,16 +264,6 @@ class model_train:
         f1 = f1_score(labels, preds, skip=ner_dict["PAD"]).tolist()
 
         return acc, f1
-
-    def forward(self, input, sub_input, label):
-        logits = self.model(input, sub_input).logits
-        pred = logits.squeeze(-1).argmax(-1)
-
-        if label is not None:
-            loss = self.loss_func(logits.view(-1, len(ner_dict)), label.view(-1))
-            return logits, pred.to("cpu"), loss
-
-        return logits, pred.to("cpu")
 
 
 if __name__ == "__main__":
