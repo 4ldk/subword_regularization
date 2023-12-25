@@ -6,9 +6,9 @@ import sys
 import hydra
 import numpy as np
 import torch
-from torch import nn, optim
+from torch import nn
 from tqdm import tqdm
-from transformers import AutoModelForTokenClassification, AutoTokenizer, get_linear_schedule_with_warmup
+from transformers import AutoModelForTokenClassification, AutoTokenizer, get_linear_schedule_with_warmup, AdamW
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils.maxMatchTokenizer import MaxMatchTokenizer
@@ -95,11 +95,11 @@ def train(
 
     valid_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.testa")
     valid_data = mmt.dataset_encode(valid_dataset, p=0, subword_label="PAD")
-    valid_loader = get_dataloader(valid_data, batch_size=batch_size, shuffle=True, drop_last=False)
+    valid_loader = get_dataloader(valid_data, batch_size=batch_size, shuffle=False, drop_last=False)
 
     test_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.testb")
     test_data = mmt.dataset_encode(test_dataset, p=0, subword_label="PAD")
-    test_loader = get_dataloader(test_data, batch_size=batch_size, shuffle=True, drop_last=False)
+    test_loader = get_dataloader(test_data, batch_size=batch_size, shuffle=False, drop_last=False)
 
     print("Dataset Loaded")
 
@@ -108,16 +108,17 @@ def train(
     num_warmup_steps = int(num_training_steps * warmup_late)
 
     net = trainer(
-        model_name,
-        device,
-        lr,
-        accum_iter,
-        weight_decay,
-        weight,
-        num_warmup_steps,
-        num_training_steps,
-        use_scheduler,
-        init_scale,
+        model_name=model_name,
+        lr=lr,
+        batch_size=batch_size,
+        accum_iter=accum_iter,
+        weight_decay=weight_decay,
+        weight=weight,
+        num_warmup_steps=num_warmup_steps,
+        num_training_steps=num_training_steps,
+        use_scheduler=use_scheduler,
+        init_scale=init_scale,
+        device=device,
     )
     net.train(mmt, train_dataset, train_loader, num_epoch, valid_loader=valid_loader, test_loader=test_loader, mmt_p=p)
 
@@ -126,7 +127,6 @@ class trainer:
     def __init__(
         self,
         model_name="bert-base-cased",
-        device="cuda",
         lr=1e-5,
         batch_size=16,
         accum_iter=2,
@@ -136,16 +136,21 @@ class trainer:
         num_training_steps=None,
         use_scheduler=False,
         init_scale=4096,
+        device="cuda",
     ):
         self.model = AutoModelForTokenClassification.from_pretrained(model_name, num_labels=len(ner_dict)).to(device)
 
-        self.optimizer = optim.Adam(
-            self.model.parameters(),
-            lr=lr,
-            betas=(0.9, 0.999),
-            weight_decay=weight_decay,
-            amsgrad=True,
-        )
+        param_optimizer = list(self.model.named_parameters())
+        no_decay = ["bias", "LayerNorm.weight"]
+        optimizer_grouped_parameters = [
+            {
+                "params": [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
+                "weight_decay": weight_decay,
+            },
+            {"params": [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], "weight_decay": 0.0},
+        ]
+        self.optimizer = AdamW(optimizer_grouped_parameters, lr=lr)
+
         self.loss_func = nn.CrossEntropyLoss(weight=weight, ignore_index=ner_dict["PAD"])
         self.scaler = torch.cuda.amp.GradScaler(init_scale=init_scale)
         if use_scheduler:
