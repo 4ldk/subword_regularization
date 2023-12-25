@@ -142,7 +142,7 @@ def loop_pred(length, model_name, test, loop=100, p=0.1, vote="majority", local_
 def pred(mmt, test_dataset, model, device="cuda", p=0, non_train=False):
     encoded_dataset = mmt.dataset_encode(test_dataset, p=p, subword_label="PAD")
 
-    inputs, attention_mask, labels, out_tokens, out_ners = (
+    inputs, attention_mask, type_ids, labels, out_tokens, out_ners = (
         encoded_dataset["input_ids"],
         encoded_dataset["attention_mask"],
         encoded_dataset["predict_labels"],
@@ -152,22 +152,25 @@ def pred(mmt, test_dataset, model, device="cuda", p=0, non_train=False):
 
     output = []
     with torch.no_grad():
-        for input, mask, label, out_token, out_ner in tzip(
-            inputs, attention_mask, labels, out_tokens, out_ners, leave=False
+        for input, mask, type_id, label, out_token, out_ner in tzip(
+            inputs, attention_mask, type_ids, labels, out_tokens, out_ners, leave=False
         ):
-            input, mask, label = (
+            input, mask, type_id, label = (
                 input.to(device),
                 mask.to(device),
+                type_id.to(device),
                 label.tolist(),
             )
             input = input.unsqueeze(0)
             mask = mask.unsqueeze(0)
+            type_id = type_id.unsqueeze(0)
 
-            pred = model(input, mask).logits.squeeze().argmax(-1).to("cpu").tolist()
+            pred = model(input, mask, type_id).logits.squeeze().argmax(-1).to("cpu").tolist()
 
             pred = [val_to_key(prd, model_dict) for (prd, lbl) in zip(pred, label) if lbl != ner_dict["PAD"]]
             pred = [c if c != "PAD" else "O" for c in pred]
             if len(pred) != len(label):
+                print("Bad Prediction!!!!")
                 pred = pred + ["O"] * (len(out_ner) - len(pred))
 
             out_pos = ["POS" for _ in out_ner]

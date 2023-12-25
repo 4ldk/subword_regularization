@@ -200,8 +200,8 @@ class trainer:
         self.post_sentence_padding = post_sentence_padding
         self.add_sep_between_sentences = add_sep_between_sentences
 
-    def forward(self, input, sub_input, label=None):
-        logits = self.model(input, sub_input).logits
+    def forward(self, input, mask, type_ids, label=None):
+        logits = self.model(input, mask, type_ids).logits
         pred = logits.squeeze(-1).argmax(-1)
 
         if label is not None:
@@ -260,16 +260,17 @@ class trainer:
         batch_loss, preds, labels = [], [], []
         final_loss, acc, f1 = 0, 0, 0
 
-        for batch_idx, (input, sub_input, label) in enumerate(bar):
-            input, sub_input, label = (
+        for batch_idx, (input, mask, type_ids, label) in enumerate(bar):
+            input, mask, type_ids, label = (
                 input.to(self.device),
-                sub_input.to(self.device),
+                mask.to(self.device),
+                type_ids.to(self.device),
                 label.to(self.device),
             )
 
             if train:
                 with torch.amp.autocast(self.device, dtype=torch.bfloat16):
-                    logits, pred, loss = self.forward(input, sub_input, label)
+                    logits, pred, loss = self.forward(input, mask, type_ids, label)
 
                 self.scaler.scale(loss / self.accum_iter).backward()
                 if ((batch_idx + 1) % self.accum_iter == 0) or (batch_idx + 1 == len(loader)):
@@ -286,7 +287,7 @@ class trainer:
             else:
                 with torch.no_grad():
                     with torch.amp.autocast(self.device, dtype=torch.bfloat16):
-                        logits, pred, loss = self.forward(input, sub_input, label)
+                        logits, pred, loss = self.forward(input, mask, type_ids, label)
                     preds.append(pred)
                     labels.append(label.to("cpu"))
 

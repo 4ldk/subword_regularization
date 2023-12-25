@@ -71,12 +71,13 @@ def get_texts_and_labels(dataset):
 
 
 def get_dataloader(data, batch_size, shuffle=True, drop_last=True):
-    ids, mask, labels = (
+    ids, mask, type_ids, labels = (
         data["input_ids"],
         data["attention_mask"],
+        data["token_type_ids"],
         data["subword_labels"],
     )
-    dataset = BertDataset(ids, mask, labels)
+    dataset = BertDataset(ids, mask, type_ids, labels)
     dataloader = DataLoader(
         dataset,
         batch_size=batch_size,

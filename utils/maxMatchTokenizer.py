@@ -241,22 +241,26 @@ class MaxMatchTokenizer:
                 row_tokens.append(text[i:j])
                 row_labels.append(labels[i:j])
                 masked_ids = copy.deepcopy(word_ids)
+                token_type_ids = [0] * len(subwords)
 
                 if post_sentence_padding:
                     while len(subwords) < max_length and j < len(text):
                         if add_sep_between_sentences and j in [d[0] for d in document["doc_index"]]:
-                            subwords = subwords + [self.sepToken]
-                            word_ids = word_ids + [None]
-                            masked_ids = masked_ids + [None]
+                            subwords.append(self.sepToken)
+                            word_ids.append(None)
+                            masked_ids.append(None)
+                            token_type_ids.append(token_type_ids[-1])
                         ex_subwords = self.tokenizeWord(text[j])
                         subwords = subwords + ex_subwords
                         word_ids = word_ids + [max_with_none(word_ids) + 1] * len(ex_subwords)
                         masked_ids = masked_ids + [None] * len(ex_subwords)
+                        token_type_ids = token_type_ids + [1] * len(ex_subwords)
                         j += 1
                         if len(subwords) < max_length:
                             subwords = subwords[:max_length]
                             word_ids = word_ids[:max_length]
                             masked_ids = masked_ids[:max_length]
+                            token_type_ids = token_type_ids[:max_length]
 
                 if pre_sentence_padding:
                     while len(subwords) < max_length and i > 0:
@@ -264,15 +268,18 @@ class MaxMatchTokenizer:
                             subwords = [self.sepToken] + subwords
                             word_ids = [None] + word_ids
                             masked_ids = [None] + masked_ids
+                            token_type_ids = [0] + token_type_ids
                         i -= 1
                         ex_subwords = self.tokenizeWord(text[i])
                         subwords = ex_subwords + subwords
                         word_ids = [min_with_none(word_ids) - 1] * len(ex_subwords) + word_ids
                         masked_ids = [None] * len(ex_subwords) + masked_ids
+                        token_type_ids = [0] * len(ex_subwords) + token_type_ids
                         if len(subwords) < max_length:
                             subwords = subwords[-max_length:]
-                            word_ids = word_ids[:max_length]
-                            masked_ids = masked_ids[:max_length]
+                            word_ids = word_ids[-max_length:]
+                            masked_ids = masked_ids[-max_length:]
+                            token_type_ids = token_type_ids[-max_length:]
 
                 subwords = [self.clsTokenId] + [self.word2id[w] for w in subwords] + [self.sepTokenId]
                 word_ids = [None] + word_ids + [None]
@@ -283,13 +290,16 @@ class MaxMatchTokenizer:
                         subwords = subwords[: self.padding]
                         word_ids = word_ids[: self.padding]
                         masked_ids = masked_ids[: self.padding]
+                        token_type_ids = token_type_ids[: self.padding]
                         mask = [1] * self.padding
+
                     else:
                         attention_len = len(subwords)
                         pad_len = self.padding - len(subwords)
                         subwords += [self.padTokenId] * pad_len
                         word_ids += [None] * pad_len
                         masked_ids += [None] * pad_len
+                        token_type_ids += [1] * pad_len
                         mask = [1] * attention_len + [0] * pad_len
                 else:
                     mask = [1] * len(subwords)
@@ -316,6 +326,7 @@ class MaxMatchTokenizer:
             data = {
                 "input_ids": torch.tensor(input_ids, dtype=torch.int),
                 "attention_mask": torch.tensor(attention_mask, dtype=torch.int),
+                "token_type_ids": torch.tensor(token_type_ids, dtype=torch.int),
                 "subword_labels": torch.tensor(subword_labels, dtype=torch.long),
                 "predict_labels": torch.tensor(predict_labels, dtype=torch.int),
                 "tokens": row_tokens,
@@ -326,6 +337,7 @@ class MaxMatchTokenizer:
             data = {
                 "input_ids": input_ids,
                 "attention_mask": attention_mask,
+                "token_type_ids": token_type_ids,
                 "subword_labels": subword_labels,
                 "predict_labels": predict_labels,
                 "tokens": row_tokens,
