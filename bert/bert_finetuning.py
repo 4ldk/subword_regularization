@@ -39,6 +39,7 @@ def main(cfg):
     seed = cfg.seed
     model_name = cfg.model_name
 
+    accum_iter = cfg.accum_iter
     weight_decay = cfg.weight_decay
     use_loss_weight = cfg.use_loss_weight
     use_scheduler = cfg.use_scheduler
@@ -52,6 +53,7 @@ def main(cfg):
         p,
         seed,
         model_name,
+        accum_iter=accum_iter,
         weight_decay=weight_decay,
         use_loss_weight=use_loss_weight,
         use_scheduler=use_scheduler,
@@ -67,6 +69,7 @@ def train(
     p,
     seed,
     model_name,
+    accum_iter=4,
     weight_decay=0,
     use_loss_weight=False,
     use_scheduler=False,
@@ -101,11 +104,20 @@ def train(
     print("Dataset Loaded")
 
     weight = train_data["weight"].to(device) if use_loss_weight else None
-    num_training_steps = len(train_loader) * num_epoch
+    num_training_steps = int(len(train_loader) / accum_iter) * num_epoch
     num_warmup_steps = int(num_training_steps * warmup_late)
 
     net = model_train(
-        model_name, device, lr, weight_decay, weight, init_scale, num_warmup_steps, num_training_steps, use_scheduler
+        model_name,
+        device,
+        lr,
+        accum_iter,
+        weight_decay,
+        weight,
+        num_warmup_steps,
+        num_training_steps,
+        use_scheduler,
+        init_scale,
     )
 
     f1s = []
@@ -149,12 +161,13 @@ class model_train:
         model_name,
         device,
         lr,
+        accum_iter,
         weight_decay,
         weight,
-        init_scale,
         num_warmup_steps,
         num_training_steps,
         use_scheduler,
+        init_scale,
     ):
         self.model = AutoModelForTokenClassification.from_pretrained(model_name, num_labels=len(ner_dict)).to(device)
 
@@ -172,6 +185,7 @@ class model_train:
 
         self.device = device
         self.use_scheduler = use_scheduler
+        self.accum_iter = accum_iter
 
     def step(self, epoch, loader, train=True):
         if train:
@@ -182,7 +196,7 @@ class model_train:
         batch_loss, preds, labels = [], [], []
         final_loss, acc, f1 = 0, 0, 0
 
-        for input, sub_input, label in bar:
+        for batch_idx, (input, sub_input, label) in enumerate(bar):
             input, sub_input, label = (
                 input.to(self.device),
                 sub_input.to(self.device),
@@ -192,7 +206,18 @@ class model_train:
             if train:
                 with torch.amp.autocast(self.device, dtype=torch.bfloat16):
                     logits, pred, loss = self.forward(input, sub_input, label)
-                self.backward(loss)
+
+                self.scaler.scale(loss / self.accum_iter).backward()
+                if ((batch_idx + 1) % self.accum_iter == 0) or (batch_idx + 1 == len(loader)):
+                    self.scaler.unscale_(self.optimizer)
+                    nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
+                    self.scaler.step(self.optimizer)
+                    self.optimizer.step()
+                    self.scaler.update()
+
+                    if self.use_scheduler:
+                        self.scheduler.step()
+                    self.optimizer.zero_grad()
                 batch_loss.append(loss.to("cpu").item())
             else:
                 with torch.no_grad():
@@ -210,18 +235,6 @@ class model_train:
         else:
             acc, f1 = self.get_score(preds, labels)
         return final_loss, acc, f1
-
-    def backward(self, loss):
-        self.optimizer.zero_grad()
-        self.scaler.scale(loss).backward()
-        self.scaler.unscale_(self.optimizer)
-        nn.utils.clip_grad_norm_(self.model.parameters(), 0.1)
-        self.scaler.step(self.optimizer)
-        self.optimizer.step()
-        self.scaler.update()
-
-        if self.use_scheduler:
-            self.scheduler.step()
 
     def get_score(self, preds, labels):
         preds = torch.concatenate(preds)
