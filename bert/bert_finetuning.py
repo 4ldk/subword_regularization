@@ -200,7 +200,7 @@ class trainer:
         self.post_sentence_padding = post_sentence_padding
         self.add_sep_between_sentences = add_sep_between_sentences
 
-    def forward(self, input, sub_input, label):
+    def forward(self, input, sub_input, label=None):
         logits = self.model(input, sub_input).logits
         pred = logits.squeeze(-1).argmax(-1)
 
