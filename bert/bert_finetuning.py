@@ -131,8 +131,6 @@ def train(
     )
     test_loader = get_dataloader(test_data, batch_size=batch_size, shuffle=False, drop_last=False)
 
-    print("Dataset Loaded")
-
     weight = train_data["weight"].to(device) if use_loss_weight else None
     num_training_steps = int(len(train_loader) / accum_iter) * num_epoch
     num_warmup_steps = int(num_training_steps * warmup_late)

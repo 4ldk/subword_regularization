@@ -1,6 +1,7 @@
 import os
 import random
 import sys
+from logging import getLogger
 
 import hydra
 import numpy as np
@@ -13,6 +14,8 @@ from transformers import AutoModelForTokenClassification, AutoTokenizer, BertCon
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils.maxMatchTokenizer import MaxMatchTokenizer
 from utils.utils import path_to_data, val_to_key
+
+logger = getLogger(__name__)
 
 ner_dict = {
     "O": 0,
@@ -91,7 +94,6 @@ def loop_pred(length, model_name, test, loop=100, p=0.1, vote="majority", local_
     elif test == "crossweigh":
         test_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/conllcw.txt")
         encoding = "utf-8"
-    print("Dataset Loaded")
 
     mmt = MaxMatchTokenizer(ner_dict=ner_dict, p=p, padding=length)
     bert_tokeninzer = AutoTokenizer.from_pretrained(model_name)
@@ -145,6 +147,7 @@ def pred(mmt, test_dataset, model, device="cuda", p=0, non_train=False):
     inputs, attention_mask, type_ids, labels, out_tokens, out_ners = (
         encoded_dataset["input_ids"],
         encoded_dataset["attention_mask"],
+        encoded_dataset["token_type_ids"],
         encoded_dataset["predict_labels"],
         encoded_dataset["tokens"],
         encoded_dataset["labels"],
@@ -169,8 +172,8 @@ def pred(mmt, test_dataset, model, device="cuda", p=0, non_train=False):
 
             pred = [val_to_key(prd, model_dict) for (prd, lbl) in zip(pred, label) if lbl != ner_dict["PAD"]]
             pred = [c if c != "PAD" else "O" for c in pred]
-            if len(pred) != len(label):
-                print("Bad Prediction!!!!")
+            if len(pred) != len(out_ner):
+                logger.warning("Bad Prediction!!!!")
                 pred = pred + ["O"] * (len(out_ner) - len(pred))
 
             out_pos = ["POS" for _ in out_ner]

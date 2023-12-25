@@ -24,7 +24,7 @@ add_sep_between_sentences: True
 
 test: "2003" # 2003, 2023, crossweigh valid
 
-local_model: "C:\\Users\\chenr\\Desktop\\python\\subword_regularization\\outputs\\bert_finetuning\\2023-12-25\\21-11-34\\model\\epoch4.pth"
+local_model: "C:\\Users\\chenr\\Desktop\\python\\subword_regularization\\outputs\\bert_finetuning\\2023-12-25\\22-29-26\\model\\epoch4.pth"
 loop: 1
 pred_p: 0
 vote: majority

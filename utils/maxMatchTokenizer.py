@@ -2,8 +2,8 @@ import copy
 import random
 
 import torch
-from transformers import AutoTokenizer
 from sklearn.utils.class_weight import compute_sample_weight
+from transformers import AutoTokenizer
 
 
 class MaxMatchTokenizer:
@@ -285,6 +285,7 @@ class MaxMatchTokenizer:
                 subwords = [self.clsTokenId] + [self.word2id[w] for w in subwords] + [self.sepTokenId]
                 word_ids = [None] + word_ids + [None]
                 masked_ids = [None] + masked_ids + [None]
+                token_type_id = [0] + token_type_id + [token_type_id[-1]]
 
                 if self.padding:
                     if len(subwords) >= self.padding:

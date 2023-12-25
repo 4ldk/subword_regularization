@@ -1,9 +1,8 @@
 import os
 import sys
 
-import torch
-from torch.utils.data import DataLoader
 from seqeval import metrics
+from torch.utils.data import DataLoader
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "."))
 from boi_convert import boi1_to_2

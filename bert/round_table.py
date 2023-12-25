@@ -1,8 +1,11 @@
 from collections import Counter
 from itertools import chain
+from logging import getLogger
 
 import hydra
 import seqeval.metrics
+
+logger = getLogger(__name__)
 
 
 def majority(preds):
@@ -54,7 +57,7 @@ def round_table(file_iter, encoding, vote="majority"):
 
     eval_preds = list(chain.from_iterable(eval_preds))
     eval_labels = list(chain.from_iterable(eval_labels))
-    print(seqeval.metrics.classification_report([eval_labels], [eval_preds], digits=4))
+    logger.info("\n" + seqeval.metrics.classification_report([eval_labels], [eval_preds], digits=4))
 
 
 @hydra.main(config_path="../config", config_name="conll2003", version_base="1.1")
