@@ -57,6 +57,7 @@ def main(cfg):
     pre_sentence_padding = cfg.pre_sentence_padding
     post_sentence_padding = cfg.post_sentence_padding
     add_sep_between_sentences = cfg.add_sep_between_sentences
+    device = cfg.device
     loop_pred(
         length,
         model_name,
@@ -68,6 +69,7 @@ def main(cfg):
         pre_sentence_padding=pre_sentence_padding,
         post_sentence_padding=post_sentence_padding,
         add_sep_between_sentences=add_sep_between_sentences,
+        device=device,
     )
 
 
@@ -82,6 +84,7 @@ def loop_pred(
     pre_sentence_padding=False,
     post_sentence_padding=False,
     add_sep_between_sentences=False,
+    device="cuda",
 ):
     random.seed(42)
     np.random.seed(42)
@@ -104,7 +107,6 @@ def loop_pred(
             "PAD": 9,
         }
 
-    device = "cuda"
     if test == "2003":
         test_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.testb")
         encoding = "utf-8"
