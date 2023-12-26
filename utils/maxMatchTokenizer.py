@@ -255,7 +255,7 @@ class MaxMatchTokenizer:
                         subwords = subwords + ex_subwords
                         word_ids = word_ids + [max_with_none(word_ids) + 1] * len(ex_subwords)
                         masked_ids = masked_ids + [None] * len(ex_subwords)
-                        token_type_id = token_type_id + [1] * len(ex_subwords)
+                        token_type_id = token_type_id + [1 if add_sep_between_sentences else 0] * len(ex_subwords)
                         j += 1
                         if len(subwords) < max_length:
                             subwords = subwords[:max_length]

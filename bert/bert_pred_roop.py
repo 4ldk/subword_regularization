@@ -54,10 +54,35 @@ def main(cfg):
     p = cfg.pred_p
     vote = cfg.vote
     local_model = cfg.local_model
-    loop_pred(length, model_name, test, loop=loop, p=p, vote=vote, local_model=local_model)
+    pre_sentence_padding = cfg.pre_sentence_padding
+    post_sentence_padding = cfg.post_sentence_padding
+    add_sep_between_sentences = cfg.add_sep_between_sentences
+    loop_pred(
+        length,
+        model_name,
+        test,
+        loop=loop,
+        p=p,
+        vote=vote,
+        local_model=local_model,
+        pre_sentence_padding=pre_sentence_padding,
+        post_sentence_padding=post_sentence_padding,
+        add_sep_between_sentences=add_sep_between_sentences,
+    )
 
 
-def loop_pred(length, model_name, test, loop=100, p=0.1, vote="majority", local_model=False):
+def loop_pred(
+    length,
+    model_name,
+    test,
+    loop=100,
+    p=0.1,
+    vote="majority",
+    local_model=False,
+    pre_sentence_padding=False,
+    post_sentence_padding=False,
+    add_sep_between_sentences=False,
+):
     random.seed(42)
     np.random.seed(42)
     torch.manual_seed(42)
@@ -112,7 +137,16 @@ def loop_pred(length, model_name, test, loop=100, p=0.1, vote="majority", local_
     for i in tqdm(range(loop)):
         if i == loop - 1:
             p = 0
-        output = pred(mmt, test_dataset, model, device, p=p)
+        output = pred(
+            mmt,
+            test_dataset,
+            model,
+            device,
+            p=p,
+            pre_sentence_padding=pre_sentence_padding,
+            post_sentence_padding=post_sentence_padding,
+            add_sep_between_sentences=add_sep_between_sentences,
+        )
         outputs.append(output)
 
     joined_out = []
@@ -141,8 +175,24 @@ def loop_pred(length, model_name, test, loop=100, p=0.1, vote="majority", local_
     round_table(file_iter, encoding, vote)
 
 
-def pred(mmt, test_dataset, model, device="cuda", p=0, non_train=False):
-    encoded_dataset = mmt.dataset_encode(test_dataset, p=p, subword_label="PAD")
+def pred(
+    mmt,
+    test_dataset,
+    model,
+    device="cuda",
+    p=0,
+    pre_sentence_padding=False,
+    post_sentence_padding=False,
+    add_sep_between_sentences=False,
+):
+    encoded_dataset = mmt.dataset_encode(
+        test_dataset,
+        p=p,
+        subword_label="PAD",
+        pre_sentence_padding=pre_sentence_padding,
+        post_sentence_padding=post_sentence_padding,
+        add_sep_between_sentences=add_sep_between_sentences,
+    )
 
     inputs, attention_mask, type_ids, labels, out_tokens, out_ners = (
         encoded_dataset["input_ids"],

@@ -14,6 +14,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils.maxMatchTokenizer import MaxMatchTokenizer
 from utils.utils import f1_score, get_dataloader, path_to_data
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 ner_dict = {
     "O": 0,
     "B-PER": 1,
