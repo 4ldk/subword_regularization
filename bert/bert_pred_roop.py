@@ -163,10 +163,9 @@ def loop_pred(
         else:
             pred_ners = []
             for output in outputs:
-                token, pos, ner, pred_ner = output[index].split(" ")
+                token, ner, pred_ner = output[index].split(" ")
                 if len(pred_ners) == 0:
                     pred_ners.append(token)
-                    pred_ners.append(pos)
                     pred_ners.append(ner)
                 pred_ners.append(pred_ner)
             pred_ners = " ".join(pred_ners)
@@ -226,9 +225,8 @@ def pred(
                 pred = [val_to_key(prd, model_dict) for (prd, lbl) in zip(pred, label) if lbl != ner_dict["PAD"]]
                 pred = [c if c != "PAD" else "O" for c in pred]
 
-                out_pos = ["POS"] * len(out_label)
                 out_label = [val_to_key(o_n, ner_dict) for o_n in out_label]
-                out = [" ".join([t, p, c, pred]) for t, p, c, pred in zip(out_token, out_pos, out_label, pred)]
+                out = [" ".join([t, c, p]) for t, c, p in zip(out_token, out_label, pred)]
                 out = "\n".join(out)
                 output.append(out)
                 output.append("\n\n")

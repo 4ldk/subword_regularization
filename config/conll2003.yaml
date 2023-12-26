@@ -7,7 +7,7 @@ batch_size: 2
 lr: 5e-5
 num_epoch: 10
 length: 512
-p: 0
+p: 0.1
 seed: 42
 device: "cuda"
 model_name: "bert-large-cased"
@@ -26,8 +26,8 @@ test: "2003" # 2003, 2023, crossweigh valid
 
 local_model: "model\\BertLargeNormal.pth" # "outputs\\yyyy-mm-dd\\hh-mm-ss\\model\\epochx.pth"
 test_batch: 4
-loop: 1
-pred_p: 0
+loop: 101
+pred_p: 0.1
 vote: majority
 
 huggingface_cache: "D:\\huggingface\\cashe"
