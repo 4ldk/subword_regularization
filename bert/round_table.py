@@ -44,8 +44,8 @@ def round_table(file_iter, encoding, vote="majority"):
 
         line = line.split(" ")
 
-        label = line[2]
-        preds = line[3:]
+        label = line[1]
+        preds = line[2:]
 
         if vote == "majority":
             pred = majority(preds)
