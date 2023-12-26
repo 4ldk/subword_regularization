@@ -15,6 +15,7 @@ from utils.maxMatchTokenizer import MaxMatchTokenizer
 from utils.utils import f1_score, get_dataloader, path_to_data
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+root_path = os.getcwd()
 ner_dict = {
     "O": 0,
     "B-PER": 1,
@@ -31,7 +32,7 @@ ner_dict = {
 
 @hydra.main(config_path="../config", config_name="conll2003", version_base="1.1")
 def main(cfg):
-    os.environ["TRANSFORMERS_CACHE"] = "D:\\huggingface\\cashe"
+    os.environ["TRANSFORMERS_CACHE"] = cfg.huggingface_cache
     batch_size = cfg.batch_size
     lr = cfg.lr
     num_epoch = cfg.num_epoch
@@ -99,7 +100,7 @@ def train(
     bert_tokeninzer = AutoTokenizer.from_pretrained(model_name)
     mmt.loadBertTokenizer(bertTokenizer=bert_tokeninzer)
 
-    train_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.train")
+    train_dataset = path_to_data(os.path.join(root_path, "/test_datasets/eng.train"))
     train_data = mmt.dataset_encode(
         train_dataset,
         p=p,
@@ -110,7 +111,7 @@ def train(
     )
     train_loader = get_dataloader(train_data, batch_size=batch_size, shuffle=True)
 
-    valid_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.testa")
+    valid_dataset = path_to_data(os.path.join(root_path, "test_datasets/eng.testa"))
     valid_data = mmt.dataset_encode(
         valid_dataset,
         p=0,
@@ -121,7 +122,7 @@ def train(
     )
     valid_loader = get_dataloader(valid_data, batch_size=batch_size, shuffle=False, drop_last=False)
 
-    test_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.testb")
+    test_dataset = path_to_data(os.path.join(root_path, "test_datasets/eng.testb"))
     test_data = mmt.dataset_encode(
         test_dataset,
         p=0,

@@ -139,10 +139,3 @@ def path_to_data(path):
         document = dict(tokens=tokens, labels=labels, doc_index=doc_index)
         data.append(document)
     return data
-
-
-if __name__ == "__main__":
-    data = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/conllpp.txt")
-    print(data[0])
-    for i, j in data[0]["doc_index"]:
-        print(data[0]["tokens"][i:j])

@@ -1,3 +1,4 @@
+import os
 from collections import Counter
 from itertools import chain
 from logging import getLogger
@@ -5,6 +6,7 @@ from logging import getLogger
 import hydra
 import seqeval.metrics
 
+root_path = os.getcwd()
 logger = getLogger(__name__)
 
 
@@ -67,9 +69,7 @@ def main(cfg):
     else:
         encoding = "utf-8"
 
-    input_path = (
-        "C:/Users/chenr/Desktop/python/subword_regularization/outputs/bert_pred_roop/2023-12-23/02-07-53/many_preds.txt"
-    )
+    input_path = os.path.join(root_path, "outputs/bert_pred_roop/2023-12-23/02-07-53/many_preds.txt")
     with open(input_path, encoding=encoding) as f:
         text = f.read()
     with open("./input_pred.txt", "w", encoding=encoding) as f:

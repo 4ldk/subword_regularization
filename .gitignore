@@ -1,3 +1,4 @@
 acl2023_conllpp/
 outputs/
+model/
 /**/__pycache__/

@@ -13,9 +13,10 @@ from transformers import AutoModelForTokenClassification, AutoTokenizer, BertCon
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils.maxMatchTokenizer import MaxMatchTokenizer
-from utils.utils import path_to_data, val_to_key
+from utils.utils import path_to_data, val_to_key, get_dataloader
 
 logger = getLogger(__name__)
+root_path = os.getcwd()
 
 ner_dict = {
     "O": 0,
@@ -46,11 +47,12 @@ model_dict = {
 
 @hydra.main(config_path="../config", config_name="conll2003", version_base="1.1")
 def main(cfg):
-    os.environ["TRANSFORMERS_CACHE"] = "D:\\huggingface\\cashe"
+    os.environ["TRANSFORMERS_CACHE"] = cfg.huggingface_cache
     length = cfg.length
     test = cfg.test
     model_name = cfg.model_name
     loop = cfg.loop
+    batch_size = cfg.test_batch
     p = cfg.pred_p
     vote = cfg.vote
     local_model = cfg.local_model
@@ -63,6 +65,7 @@ def main(cfg):
         model_name,
         test,
         loop=loop,
+        batch_size=batch_size,
         p=p,
         vote=vote,
         local_model=local_model,
@@ -78,6 +81,7 @@ def loop_pred(
     model_name,
     test,
     loop=100,
+    batch_size=4,
     p=0.1,
     vote="majority",
     local_model=False,
@@ -108,18 +112,18 @@ def loop_pred(
         }
 
     if test == "2003":
-        test_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.testb")
+        test_dataset = path_to_data(os.path.join(root_path, "test_datasets/eng.testb"))
         encoding = "utf-8"
 
     elif test == "valid":
-        test_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/eng.testa")
+        test_dataset = path_to_data(os.path.join(root_path, "test_datasets/eng.testa"))
         encoding = "utf-8"
 
     elif test == "2023":
-        test_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/conllpp.txt")
+        test_dataset = path_to_data(os.path.join(root_path, "test_datasets/conllpp.txt"))
         encoding = "utf-8"
     elif test == "crossweigh":
-        test_dataset = path_to_data("C:/Users/chenr/Desktop/python/subword_regularization/test_datasets/conllcw.txt")
+        test_dataset = path_to_data(os.path.join(root_path, "test_datasets/conllcw.txt"))
         encoding = "utf-8"
 
     mmt = MaxMatchTokenizer(ner_dict=ner_dict, p=p, padding=length)
@@ -129,7 +133,7 @@ def loop_pred(
     if local_model:
         config = BertConfig.from_pretrained(model_name, num_labels=len(ner_dict))
         model = AutoModelForTokenClassification.from_config(config)
-        model.load_state_dict(torch.load(local_model))
+        model.load_state_dict(torch.load(os.path.join(root_path, local_model)))
         model = model.to(device)
     else:
         model = AutoModelForTokenClassification.from_pretrained(model_name).to(device)
@@ -144,6 +148,7 @@ def loop_pred(
             test_dataset,
             model,
             device,
+            batch_size=batch_size,
             p=p,
             pre_sentence_padding=pre_sentence_padding,
             post_sentence_padding=post_sentence_padding,
@@ -182,6 +187,7 @@ def pred(
     test_dataset,
     model,
     device="cuda",
+    batch_size=4,
     p=0,
     pre_sentence_padding=False,
     post_sentence_padding=False,
@@ -195,45 +201,37 @@ def pred(
         post_sentence_padding=post_sentence_padding,
         add_sep_between_sentences=add_sep_between_sentences,
     )
-
-    inputs, attention_mask, type_ids, labels, out_tokens, out_ners = (
-        encoded_dataset["input_ids"],
-        encoded_dataset["attention_mask"],
-        encoded_dataset["token_type_ids"],
-        encoded_dataset["predict_labels"],
+    dataloader = get_dataloader(encoded_dataset, batch_size=batch_size, shuffle=False, drop_last=False)
+    labels, out_tokens, out_labels = (
+        encoded_dataset["predict_labels"].tolist(),
         encoded_dataset["tokens"],
         encoded_dataset["labels"],
     )
 
     output = []
     with torch.no_grad():
-        for input, mask, type_id, label, out_token, out_ner in tzip(
-            inputs, attention_mask, type_ids, labels, out_tokens, out_ners, leave=False
-        ):
-            input, mask, type_id, label = (
+        for i, (input, mask, type_id, _) in enumerate(tqdm(dataloader, leave=False)):
+            input, mask, type_id = (
                 input.to(device),
                 mask.to(device),
                 type_id.to(device),
-                label.tolist(),
             )
-            input = input.unsqueeze(0)
-            mask = mask.unsqueeze(0)
-            type_id = type_id.unsqueeze(0)
 
-            pred = model(input, mask, type_id).logits.squeeze().argmax(-1).to("cpu").tolist()
+            preds = model(input, mask, type_id).logits.argmax(-1).to("cpu").tolist()
+            for j, pred in enumerate(preds):
+                label = labels[i * batch_size + j]
+                out_label = out_labels[i * batch_size + j]
+                out_token = out_tokens[i * batch_size + j]
 
-            pred = [val_to_key(prd, model_dict) for (prd, lbl) in zip(pred, label) if lbl != ner_dict["PAD"]]
-            pred = [c if c != "PAD" else "O" for c in pred]
-            if len(pred) != len(out_ner):
-                logger.warning("Bad Prediction!!!!")
-                pred = pred + ["O"] * (len(out_ner) - len(pred))
+                pred = [val_to_key(prd, model_dict) for (prd, lbl) in zip(pred, label) if lbl != ner_dict["PAD"]]
+                pred = [c if c != "PAD" else "O" for c in pred]
 
-            out_pos = ["POS" for _ in out_ner]
-            out_ner = [val_to_key(o_n, ner_dict) for o_n in out_ner]
-            out = [" ".join([t, p, c, pred]) for t, p, c, pred in zip(out_token, out_pos, out_ner, pred)]
-            out = "\n".join(out)
-            output.append(out)
-            output.append("\n\n")
+                out_pos = ["POS"] * len(out_label)
+                out_label = [val_to_key(o_n, ner_dict) for o_n in out_label]
+                out = [" ".join([t, p, c, pred]) for t, p, c, pred in zip(out_token, out_pos, out_label, pred)]
+                out = "\n".join(out)
+                output.append(out)
+                output.append("\n\n")
     output = "".join(output).split("\n")
 
     return output

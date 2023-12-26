@@ -14,7 +14,7 @@ model_name: "bert-large-cased"
 
 accum_iter: 16
 weight_decay: 0.01
-use_loss_weight: True
+use_loss_weight: False
 use_scheduler: True
 warmup_late: 0.1
 
@@ -24,7 +24,10 @@ add_sep_between_sentences: True
 
 test: "2003" # 2003, 2023, crossweigh valid
 
-local_model: "C:\\Users\\chenr\\Desktop\\python\\subword_regularization\\outputs\\bert_finetuning\\2023-12-26\\02-35-16\\model\\epoch6.pth"
+local_model: "model\\BertLargeNormal.pth" # "outputs\\yyyy-mm-dd\\hh-mm-ss\\model\\epochx.pth"
+test_batch: 4
 loop: 1
 pred_p: 0
 vote: majority
+
+huggingface_cache: "D:\\huggingface\\cashe"
