@@ -24,7 +24,11 @@ def upper_bound(label, preds):
         return majority(preds)
 
 
-def round_table(file_iter, encoding, vote="majority"):
+def get_const(preds):
+    return preds[-1]
+
+
+def round_table(file_iter, vote="majority"):
     eval_preds = []
     eval_labels = []
 
@@ -51,6 +55,8 @@ def round_table(file_iter, encoding, vote="majority"):
             pred = majority(preds)
         elif vote == "upper_bound":
             pred = upper_bound(label, preds)
+        elif vote == "const":
+            pred = get_const(preds)
         else:
             print("Vote Error")
             exit(1)
@@ -69,13 +75,13 @@ def main(cfg):
     else:
         encoding = "utf-8"
 
-    input_path = os.path.join(root_path, "outputs/bert_pred_roop/2023-12-23/02-07-53/many_preds.txt")
+    input_path = os.path.join(root_path, "outputs\\bert_pred_roop\\2023-12-27\\22-37-44\\many_preds.txt")
     with open(input_path, encoding=encoding) as f:
         text = f.read()
     with open("./input_pred.txt", "w", encoding=encoding) as f:
         f.write(text)
     file_iter = text.split("\n")
-    round_table(file_iter, encoding, "majority")
+    round_table(file_iter, "const")
 
 
 if __name__ == "__main__":

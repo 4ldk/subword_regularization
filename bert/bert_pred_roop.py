@@ -8,12 +8,11 @@ import numpy as np
 import torch
 from round_table import round_table
 from tqdm import tqdm
-from tqdm.contrib import tzip
 from transformers import AutoModelForTokenClassification, AutoTokenizer, BertConfig
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils.maxMatchTokenizer import MaxMatchTokenizer
-from utils.utils import path_to_data, val_to_key, get_dataloader
+from utils.utils import get_dataloader, path_to_data, val_to_key
 
 logger = getLogger(__name__)
 root_path = os.getcwd()
@@ -178,7 +177,7 @@ def loop_pred(
 
     with open(path, encoding=encoding) as f:
         file_iter = f.readlines()
-    round_table(file_iter, encoding, vote)
+    round_table(file_iter, vote)
 
 
 def pred(

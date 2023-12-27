@@ -53,8 +53,8 @@ class MaxMatchTokenizer:
             self.id2word[self.word2id[w]] = w
 
     # This function corresponds to Algorithm 1 in the paper.
-    def tokenizeWord(self, word, p=False):
-        p = p if p else self.p
+    def tokenizeWord(self, word, p=None):
+        p = p if p is not None else self.p
 
         subwords = []
         i = 0
@@ -83,8 +83,8 @@ class MaxMatchTokenizer:
                 subwords.append(subword)
         return subwords
 
-    def tokenize(self, text, p=False):
-        p = p if p else self.p
+    def tokenize(self, text, p=None):
+        p = p if p is not None else self.p
         if type(text) is list:
             return [self.tokenize(line, p) for line in text]
         if self.doNaivePreproc:
@@ -101,8 +101,8 @@ class MaxMatchTokenizer:
         subwords = [sw[1] for sw in subwords]
         return subwords, word_ids
 
-    def encode(self, text, p=False):
-        p = p if p else self.p
+    def encode(self, text, p=None):
+        p = p if p is not None else self.p
         if type(text) is list:
             subwords = [self.clsTokenId] + [
                 self.word2id[w] for line in text for w in self.tokenize(line, p)[0] + [self.sepToken]
@@ -207,14 +207,14 @@ class MaxMatchTokenizer:
     def dataset_encode(
         self,
         data,
-        p=False,
+        p=None,
         return_tensor=True,
         subword_label="I",
         pre_sentence_padding=False,
         post_sentence_padding=False,
         add_sep_between_sentences=False,
     ):
-        p = p if p else self.p
+        p = p if p is not None else self.p
 
         def max_with_none(lst):
             lst = [ls for ls in lst if ls is not None]
