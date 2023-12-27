@@ -16,6 +16,7 @@ from utils.utils import get_dataloader, path_to_data, val_to_key
 
 logger = getLogger(__name__)
 root_path = os.getcwd()
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 ner_dict = {
     "O": 0,
