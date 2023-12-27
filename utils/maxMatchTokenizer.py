@@ -251,7 +251,7 @@ class MaxMatchTokenizer:
                             word_ids.append(None)
                             masked_ids.append(None)
                             token_type_id.append(token_type_id[-1])
-                        ex_subwords = self.tokenizeWord(text[j])
+                        ex_subwords = self.tokenizeWord(text[j], p=p)
                         subwords = subwords + ex_subwords
                         word_ids = word_ids + [max_with_none(word_ids) + 1] * len(ex_subwords)
                         masked_ids = masked_ids + [None] * len(ex_subwords)
@@ -271,7 +271,7 @@ class MaxMatchTokenizer:
                             masked_ids = [None] + masked_ids
                             token_type_id = [0] + token_type_id
                         i -= 1
-                        ex_subwords = self.tokenizeWord(text[i])
+                        ex_subwords = self.tokenizeWord(text[i], p=p)
                         subwords = ex_subwords + subwords
                         word_ids = [min_with_none(word_ids) - 1] * len(ex_subwords) + word_ids
                         masked_ids = [None] * len(ex_subwords) + masked_ids

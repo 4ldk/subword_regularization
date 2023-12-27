@@ -24,7 +24,7 @@ add_sep_between_sentences: True
 
 test: "2003" # 2003, 2023, crossweigh valid
 
-local_model: "model\\BertLargeNormal.pth" # "outputs\\yyyy-mm-dd\\hh-mm-ss\\model\\epochx.pth"
+local_model: "model\\BertLargeNormal.pth" # "outputs\\bert_finetuning\\yyyy-mm-dd\\hh-mm-ss\\model\\epochx.pth"
 test_batch: 4
 loop: 101
 pred_p: 0.1

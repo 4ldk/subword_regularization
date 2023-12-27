@@ -1,12 +1,12 @@
 import os
 import sys
 
+import torch
 from seqeval import metrics
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "."))
 from boi_convert import boi1_to_2
-from datamodule import BertDataset
 
 ner_dict = {
     "O": 0,
@@ -20,6 +20,30 @@ ner_dict = {
     "I-MISC": 8,
     "PAD": 9,
 }
+
+
+class BertDataset(Dataset):
+    def __init__(self, X, mask, type_ids, y) -> None:
+        super().__init__()
+        if type(X) is not torch.Tensor:
+            X = torch.tensor(X)
+        if type(mask) is not torch.Tensor:
+            mask = torch.tensor(mask)
+        if type(type_ids) is not torch.Tensor:
+            type_ids = torch.tensor(type_ids)
+        if type(y) is not torch.Tensor:
+            y = torch.tensor(y)
+
+        self.X = X
+        self.mask = mask
+        self.type_ids = type_ids
+        self.y = y
+
+    def __len__(self):
+        return len(self.X)
+
+    def __getitem__(self, idx):
+        return self.X[idx], self.mask[idx], self.type_ids[idx], self.y[idx]
 
 
 def recall_score(target, pred, average="micro", skip=-1):
