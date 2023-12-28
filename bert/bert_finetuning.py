@@ -100,7 +100,7 @@ def train(
     bert_tokeninzer = AutoTokenizer.from_pretrained(model_name)
     mmt.loadBertTokenizer(bertTokenizer=bert_tokeninzer)
 
-    train_dataset = path_to_data(os.path.join(root_path, "/test_datasets/eng.train"))
+    train_dataset = path_to_data(os.path.join(root_path, "test_datasets/eng.train"))
     train_data = mmt.dataset_encode(
         train_dataset,
         p=p,
