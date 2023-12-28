@@ -14,7 +14,6 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils.maxMatchTokenizer import MaxMatchTokenizer
 from utils.utils import f1_score, get_dataloader, path_to_data
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 root_path = os.getcwd()
 ner_dict = {
     "O": 0,
@@ -32,6 +31,7 @@ ner_dict = {
 
 @hydra.main(config_path="../config", config_name="conll2003", version_base="1.1")
 def main(cfg):
+    os.environ["CUDA_VISIBLE_DEVICES"] = cfg.visible_devices
     os.environ["TRANSFORMERS_CACHE"] = cfg.huggingface_cache
     batch_size = cfg.batch_size
     lr = cfg.lr

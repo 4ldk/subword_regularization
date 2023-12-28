@@ -31,3 +31,4 @@ pred_p: 0.1
 vote: majority
 
 huggingface_cache: "D:\\huggingface\\cashe"
+visible_devices: "0"

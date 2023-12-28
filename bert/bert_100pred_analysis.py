@@ -5,6 +5,7 @@ import seqeval.metrics
 
 def main():
     use_datasets = ["test", "2023", "valid"]  # ["test","2023","valid"]
+    model = "Reg"  # Reg, Normal
     max_num = 10
     zero_division = "skip"  # "skip"  # 0, 1, skip
 
@@ -14,7 +15,7 @@ def main():
             encoding = "cp-932"
         else:
             encoding = "utf-8"
-        with open(f"./outputs100/BertNormal{u_d}/many_preds.txt", encoding=encoding) as f:
+        with open(f"./outputs100/{model}{u_d}/many_preds.txt", encoding=encoding) as f:
             dataset = f.read()
         dataset = dataset.split("\n\n")
         datasets += dataset
@@ -83,7 +84,7 @@ def main():
     ax.plot(nums[:max_num], ave_f1s[:max_num], color="k")
     ax2.set_yscale("log")
     ax.set_ylim(0.70, 1)
-    ax2.set_ylim(0.9, 5000)
+    ax2.set_ylim(0.9, 7500)
 
     ax.set_xlabel("Number of output variations")
     ax.set_ylabel("F1 micro average")
