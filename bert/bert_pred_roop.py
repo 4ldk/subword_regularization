@@ -16,7 +16,6 @@ from utils.utils import get_dataloader, path_to_data, val_to_key
 
 logger = getLogger(__name__)
 root_path = os.getcwd()
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 ner_dict = {
     "O": 0,
@@ -47,6 +46,7 @@ model_dict = {
 
 @hydra.main(config_path="../config", config_name="conll2003", version_base="1.1")
 def main(cfg):
+    os.environ["CUDA_VISIBLE_DEVICES"] = cfg.visible_devices
     os.environ["TRANSFORMERS_CACHE"] = cfg.huggingface_cache
     length = cfg.length
     test = cfg.test
