@@ -32,7 +32,8 @@ ner_dict = {
 @hydra.main(config_path="../config", config_name="conll2003", version_base="1.1")
 def main(cfg):
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg.visible_devices
-    os.environ["TRANSFORMERS_CACHE"] = cfg.huggingface_cache
+    if cfg.huggingface_cache:
+        os.environ["TRANSFORMERS_CACHE"] = cfg.huggingface_cache
     batch_size = cfg.batch_size
     lr = cfg.lr
     num_epoch = cfg.num_epoch

@@ -47,7 +47,9 @@ model_dict = {
 @hydra.main(config_path="../config", config_name="conll2003", version_base="1.1")
 def main(cfg):
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg.visible_devices
-    os.environ["TRANSFORMERS_CACHE"] = cfg.huggingface_cache
+    if cfg.huggingface_cache:
+        os.environ["TRANSFORMERS_CACHE"] = cfg.huggingface_cache
+
     length = cfg.length
     test = cfg.test
     model_name = cfg.model_name

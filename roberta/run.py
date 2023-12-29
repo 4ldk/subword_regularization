@@ -16,7 +16,8 @@ logger = getLogger(__name__)
 def main(cfg):
     start = time.time()
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg.visible_devices
-    os.environ["TRANSFORMERS_CACHE"] = cfg.huggingface_cache
+    if cfg.huggingface_cache:
+        os.environ["TRANSFORMERS_CACHE"] = cfg.huggingface_cache
 
     logger.info(f"Train Roberta\n sub_reg_p={cfg.p}\nseed={cfg.seed}")
     train(

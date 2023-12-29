@@ -29,6 +29,6 @@ loop: 101
 pred_p: 0.1
 vote: majority
 
-huggingface_cache: "D:\\huggingface\\cashe"
+huggingface_cache: False
 visible_devices: "1"
 output_path = "./many_preds.txt"
