@@ -31,4 +31,4 @@ vote: majority
 
 huggingface_cache: False
 visible_devices: "1"
-output_path = "./many_preds.txt"
+output_path: "./many_preds.txt"
