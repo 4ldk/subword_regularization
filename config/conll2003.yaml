@@ -5,9 +5,9 @@ hydra:
 
 batch_size: 2
 lr: 5e-5
-num_epoch: 10
+num_epoch: 20
 length: 512
-p: 0.1
+p: 0
 seed: 42
 device: "cuda"
 model_name: "bert-large-cased"
@@ -22,9 +22,9 @@ pre_sentence_padding: False
 post_sentence_padding: True
 add_sep_between_sentences: True
 
-test: "2003" # 2003, 2023, crossweigh valid
+test: "2023" # 2003, 2023, crossweigh valid
 
-local_model: "model\\BertLargeNormal.pth" # "outputs\\bert_finetuning\\yyyy-mm-dd\\hh-mm-ss\\model\\epochx.pth"
+local_model: "model\\BertLargeReg3.pth" # "outputs\\bert_finetuning\\yyyy-mm-dd\\hh-mm-ss\\model\\epochx.pth"
 test_batch: 4
 loop: 101
 pred_p: 0.1

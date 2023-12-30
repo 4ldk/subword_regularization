@@ -5,7 +5,8 @@ import seqeval.metrics
 
 def main():
     use_datasets = ["test", "2023", "valid"]  # ["test","2023","valid"]
-    model = "Reg"  # Reg, Normal
+    model_type = "Bert"  # Bert, Roberta
+    model = "Reg"  # Reg, Normal, Reg3
     max_num = 10
     zero_division = "skip"  # "skip"  # 0, 1, skip
 
@@ -15,7 +16,7 @@ def main():
             encoding = "cp-932"
         else:
             encoding = "utf-8"
-        with open(f"./outputs100/{model}{u_d}/many_preds.txt", encoding=encoding) as f:
+        with open(f"./outputs100/{model_type}/{model}{u_d}/many_preds.txt", encoding=encoding) as f:
             dataset = f.read()
         dataset = dataset.split("\n\n")
         datasets += dataset

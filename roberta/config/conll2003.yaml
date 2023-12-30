@@ -3,7 +3,7 @@ hydra:
     dir: outputs/${hydra.job.name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
 
 
-batch_size: 2
+batch_size: 8
 lr: 5e-5
 num_epoch: 20
 length: 510
@@ -12,7 +12,7 @@ seed: 42
 device: "cuda"
 model_name: "roberta-large"
 
-accum_iter: 16
+accum_iter: 4
 weight_decay: 0.01
 use_loss_weight: False
 use_scheduler: True
@@ -30,5 +30,5 @@ pred_p: 0.1
 vote: majority
 
 huggingface_cache: False
-visible_devices: "1"
+visible_devices: "0"
 output_path: "./many_preds.txt"

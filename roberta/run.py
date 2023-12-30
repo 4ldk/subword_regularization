@@ -91,3 +91,6 @@ def main(cfg):
     minutes = final_time // 60 - hours * 60
     seconds = final_time % 60
     logger.info(f"Time: {hours}h {minutes}m {seconds}s")
+
+if __name__ == "__main__":
+    main()
