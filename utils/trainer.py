@@ -30,6 +30,7 @@ class trainer:
         model_name="bert-base-cased",
         lr=1e-5,
         batch_size=16,
+        length=512,
         accum_iter=2,
         weight_decay=0.01,
         weight=False,
@@ -62,6 +63,7 @@ class trainer:
         self.device = device
         self.model_name = model_name
         self.batch_size = batch_size
+        self.length = length
         self.use_scheduler = use_scheduler
         self.accum_iter = accum_iter
         self.post_sentence_padding = post_sentence_padding
@@ -96,6 +98,9 @@ class trainer:
                     tokenizer,
                     train_dataset,
                     p=p,
+                    padding=self.length,
+                    return_tensor=True,
+                    subword_label="PAD",
                     post_sentence_padding=self.post_sentence_padding,
                     add_sep_between_sentences=self.add_sep_between_sentences,
                 )

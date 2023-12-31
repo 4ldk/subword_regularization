@@ -122,6 +122,7 @@ def train(
         model_name=model_name,
         lr=lr,
         batch_size=batch_size,
+        length=length,
         accum_iter=accum_iter,
         weight_decay=weight_decay,
         weight=weight,
