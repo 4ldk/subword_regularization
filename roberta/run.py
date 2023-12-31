@@ -38,11 +38,11 @@ def main(cfg):
     )
     local_model = "./model/epoch19.pth"
     logger.info("Predict 2023 data")
-    output_path = "./many_pred_test.txt"
+    output_path = "./many_pred_2023.txt"
     loop_pred(
         length=cfg.length,
         model_name=cfg.model_name,
-        test=2023,
+        test="2023",
         loop=cfg.loop,
         batch_size=cfg.test_batch,
         p=cfg.pred_p,
@@ -69,8 +69,8 @@ def main(cfg):
         device=cfg.device,
         output_path=output_path,
     )
-    logger.info("Predict 2023 data")
-    output_path = "./many_pred_2023.txt"
+    logger.info("Predict test data")
+    output_path = "./many_pred_test.txt"
     loop_pred(
         length=cfg.length,
         model_name=cfg.model_name,
@@ -91,6 +91,7 @@ def main(cfg):
     minutes = final_time // 60 - hours * 60
     seconds = final_time % 60
     logger.info(f"Time: {hours}h {minutes}m {seconds}s")
+
 
 if __name__ == "__main__":
     main()
