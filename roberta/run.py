@@ -40,7 +40,7 @@ def main(cfg):
         post_sentence_padding=cfg.post_sentence_padding,
         add_sep_between_sentences=cfg.add_sep_between_sentences,
     )
-    tokenizer = RobertaTokenizerDropout.from_pretrained(cfg.model_name, alpha=cfg.test_p)
+    tokenizer = RobertaTokenizerDropout.from_pretrained(cfg.model_name, alpha=cfg.pred_p)
     local_model = "./model/epoch19.pth"
     logger.info("Predict 2023 data")
     output_path = "./many_pred_2023.txt"

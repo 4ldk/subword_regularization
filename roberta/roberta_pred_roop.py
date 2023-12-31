@@ -52,7 +52,7 @@ def main(cfg):
         tokenizer,
         loop=cfg.loop,
         batch_size=cfg.batch_size,
-        p=cfg.test_p,
+        p=cfg.pred_p,
         vote=cfg.vote,
         local_model=cfg.local_model,
         post_sentence_padding=cfg.post_sentence_padding,
