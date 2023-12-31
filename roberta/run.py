@@ -2,17 +2,19 @@ import os
 import sys
 import hydra
 import time
+import argparse
 from logging import getLogger
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "."))
 from roberta_finetuning import train
 from roberta_pred_roop import loop_pred
 
-
+parser = argparse.ArgumentParser()
+parser.add_argument("--config", "-c", default="conll2003")
 logger = getLogger(__name__)
 
 
-@hydra.main(config_path="./config", config_name="conll2003", version_base="1.1")
+@hydra.main(config_path="./config", config_name=parser.config, version_base="1.1")
 def main(cfg):
     start = time.time()
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg.visible_devices
