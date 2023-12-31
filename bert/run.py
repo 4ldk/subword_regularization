@@ -55,7 +55,7 @@ def main(cfg):
         add_sep_between_sentences=cfg.add_sep_between_sentences,
     )
 
-    mmt = MaxMatchTokenizer(ner_dict=ner_dict, p=cfg.test_p, padding=cfg.length)
+    mmt = MaxMatchTokenizer(ner_dict=ner_dict, p=cfg.pred_p, padding=cfg.length)
     bert_tokeninzer = AutoTokenizer.from_pretrained(cfg.model_name)
     mmt.loadBertTokenizer(bertTokenizer=bert_tokeninzer)
 
@@ -68,7 +68,7 @@ def main(cfg):
         test="2023",
         loop=cfg.loop,
         batch_size=cfg.batch_size,
-        p=cfg.p,
+        p=cfg.pred_p,
         vote=cfg.vote,
         local_model=local_model,
         pre_sentence_padding=cfg.pre_sentence_padding,
@@ -85,7 +85,7 @@ def main(cfg):
         test="valid",
         loop=cfg.loop,
         batch_size=cfg.batch_size,
-        p=cfg.p,
+        p=cfg.pred_p,
         vote=cfg.vote,
         local_model=local_model,
         pre_sentence_padding=cfg.pre_sentence_padding,
@@ -102,7 +102,7 @@ def main(cfg):
         test="test",
         loop=cfg.loop,
         batch_size=cfg.batch_size,
-        p=cfg.p,
+        p=cfg.pred_p,
         vote=cfg.vote,
         local_model=local_model,
         pre_sentence_padding=cfg.pre_sentence_padding,

@@ -44,7 +44,7 @@ def main(cfg):
     if cfg.huggingface_cache:
         os.environ["TRANSFORMERS_CACHE"] = cfg.huggingface_cache
 
-    tokenizer = RobertaTokenizerDropout.from_pretrained(cfg.model_name, alpha=cfg.test_p)
+    tokenizer = RobertaTokenizerDropout.from_pretrained(cfg.model_name, alpha=cfg.pred_p)
     loop_pred(
         cfg.length,
         cfg.model_name,

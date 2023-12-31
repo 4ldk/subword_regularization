@@ -45,7 +45,7 @@ def main(cfg):
     if cfg.huggingface_cache:
         os.environ["TRANSFORMERS_CACHE"] = cfg.huggingface_cache
 
-    mmt = MaxMatchTokenizer(ner_dict=ner_dict, p=cfg.test_p, padding=cfg.length)
+    mmt = MaxMatchTokenizer(ner_dict=ner_dict, p=cfg.pred_p, padding=cfg.length)
     bert_tokeninzer = AutoTokenizer.from_pretrained(cfg.model_name)
     mmt.loadBertTokenizer(bertTokenizer=bert_tokeninzer)
 
@@ -56,7 +56,7 @@ def main(cfg):
         tokenizer=mmt,
         loop=cfg.loop,
         batch_size=cfg.batch_size,
-        p=cfg.p,
+        p=cfg.pred_p,
         vote=cfg.vote,
         local_model=cfg.local_model,
         post_sentence_padding=cfg.post_sentence_padding,
