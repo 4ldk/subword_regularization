@@ -316,6 +316,7 @@ def dataset_encode(
             "labels": row_labels,
             "weight": torch.tensor(weight, dtype=torch.float32),
         }
+        data["token_type_ids"] = torch.zeros_like(data["attention_mask"])
     else:
         data = {
             "input_ids": input_ids,
