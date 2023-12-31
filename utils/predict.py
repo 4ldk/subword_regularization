@@ -4,7 +4,7 @@ import sys
 
 import numpy as np
 import torch
-import tqdm
+from tqdm import tqdm
 from transformers import AutoConfig, AutoModelForTokenClassification
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
