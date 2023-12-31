@@ -96,6 +96,7 @@ def loop_pred(
             tokenizer,
             test_dataset,
             model,
+            model_name,
             device,
             batch_size=batch_size,
             length=length,
@@ -134,6 +135,7 @@ def pred(
     tokenizer,
     test_dataset,
     model,
+    model_name,
     device="cuda",
     batch_size=4,
     length=512,
@@ -159,13 +161,15 @@ def pred(
 
     output = []
     with torch.no_grad():
-        for i, (input, mask, _) in enumerate(tqdm(dataloader, leave=False)):
+        for i, (input, mask, type_ids, label) in enumerate(tqdm(dataloader, leave=False)):
             input, mask = (
                 input.to(device),
                 mask.to(device),
             )
-
-            preds = model(input_ids=input, attention_mask=mask).logits.argmax(-1).to("cpu").tolist()
+            if "bert" in model_name:
+                preds = model(input, mask, type_ids.to(device)).logits.argmax(-1).to("cpu").tolist()
+            else:
+                preds = model(input, mask).logits.argmax(-1).to("cpu").tolist()
             for j, pred in enumerate(preds):
                 label = labels[i * batch_size + j]
                 out_label = out_labels[i * batch_size + j]

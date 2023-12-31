@@ -10,7 +10,7 @@ length: 512
 p: 0
 seed: 42
 device: "cuda"
-model_name: "bert-base-cased" # bert-large-cesed roberta-large
+model_name: "bert-large-cased" # bert-large-cesed roberta-large
 
 accum_iter: 1
 weight_decay: 0.01

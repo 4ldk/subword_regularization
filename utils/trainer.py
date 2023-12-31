@@ -60,6 +60,7 @@ class trainer:
             self.scheduler = get_linear_schedule_with_warmup(self.optimizer, num_warmup_steps, num_training_steps)
 
         self.device = device
+        self.model_name = model_name
         self.batch_size = batch_size
         self.use_scheduler = use_scheduler
         self.accum_iter = accum_iter
@@ -129,16 +130,18 @@ class trainer:
         final_loss, acc, f1 = 0, 0, 0
 
         for batch_idx, (input, mask, type_ids, label) in enumerate(bar):
-            input, mask, type_ids, label = (
+            input, mask, label = (
                 input.to(self.device),
                 mask.to(self.device),
-                type_ids.to(self.device),
                 label.to(self.device),
             )
 
             if train:
                 with torch.amp.autocast(self.device, dtype=torch.bfloat16):
-                    logits, pred, loss = self.forward(input, mask, type_ids, label)
+                    if self.model_name:
+                        logits, pred, loss = self.forward(input, mask, type_ids.to(self.device), label)
+                    else:
+                        logits, pred, loss = self.forward(input, mask, label)
 
                 self.scaler.scale(loss / self.accum_iter).backward()
                 if ((batch_idx + 1) % self.accum_iter == 0) or (batch_idx + 1 == len(loader)):

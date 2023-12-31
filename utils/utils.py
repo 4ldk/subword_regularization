@@ -9,7 +9,6 @@ from torch.utils.data import DataLoader, Dataset
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "."))
 from boi_convert import boi1_to_2
-from maxMatchTokenizer import MaxMatchTokenizer
 
 ner_dict = {
     "O": 0,
@@ -109,12 +108,12 @@ def get_texts_and_labels(dataset):
     return data
 
 
-def get_dataloader(data, batch_size, shuffle=True, drop_last=True):
+def get_dataloader(data, batch_size, shuffle=True, drop_last=True, label_name="subword_labels"):
     ids, mask, type_ids, labels = (
         data["input_ids"],
         data["attention_mask"],
         data["token_type_ids"],
-        data["subword_labels"],
+        data[label_name],
     )
     dataset = BertDataset(ids, mask, type_ids, labels)
     dataloader = DataLoader(
@@ -214,7 +213,7 @@ def dataset_encode(
     post_sentence_padding=False,
     add_sep_between_sentences=False,
 ):
-    if type(tokenizer) is MaxMatchTokenizer:
+    if tokenizer.__class__.__name__ == "MaxMatchTokenizer":
         return tokenizer.dataset_encode(
             data,
             p=p,
