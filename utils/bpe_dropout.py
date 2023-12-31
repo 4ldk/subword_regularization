@@ -1,9 +1,9 @@
 import copy
 import random
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
-from transformers import RobertaTokenizer, XLMRobertaTokenizer
 import sentencepiece as spm
+from transformers import RobertaTokenizer, XLMRobertaTokenizer
 
 
 def get_pairs(word, alpha=0):

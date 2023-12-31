@@ -3,32 +3,32 @@ hydra:
     dir: outputs/${hydra.job.name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
 
 
-batch_size: 2
+batch_size: 32
 lr: 5e-5
 num_epoch: 20
 length: 512
 p: 0
 seed: 42
 device: "cuda"
-model_name: "bert-large-cased"
+model_name: "bert-base-cased" # bert-large-cesed roberta-large
 
-accum_iter: 16
+accum_iter: 1
 weight_decay: 0.01
 use_loss_weight: False
 use_scheduler: True
 warmup_late: 0.1
 
-pre_sentence_padding: False
 post_sentence_padding: True
 add_sep_between_sentences: True
 
-test: "2023" # 2003, 2023, crossweigh valid
+test: "2003" # 2003, 2023, crossweigh valid
 
-local_model: "model\\BertLargeReg3.pth" # "outputs\\bert_finetuning\\yyyy-mm-dd\\hh-mm-ss\\model\\epochx.pth"
-test_batch: 4
+local_model: "model/BertLargeReg3.pth" # "outputs\\bert_finetuning\\yyyy-mm-dd\\hh-mm-ss\\model\\epochx.pth"
+test_batch: 16
 loop: 101
 pred_p: 0.1
 vote: majority
 
-huggingface_cache: "D:\\huggingface\\cashe"
+huggingface_cache: "D:/huggingface/cashe"
 visible_devices: "0"
+output_path: "./many_preds.txt"

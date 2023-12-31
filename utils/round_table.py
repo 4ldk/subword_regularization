@@ -75,7 +75,7 @@ def main(cfg):
     else:
         encoding = "utf-8"
 
-    input_path = os.path.join(root_path, "outputs100\\Reg2023\\many_preds.txt")
+    input_path = os.path.join(root_path, "outputs100\\Bert\\Reg3test\\many_preds.txt")
     with open(input_path, encoding=encoding) as f:
         text = f.read()
     with open("./input_pred.txt", "w", encoding=encoding) as f:

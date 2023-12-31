@@ -5,15 +5,29 @@ import time
 from logging import getLogger
 
 import hydra
+from transformers import AutoTokenizer
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from roberta.roberta_finetuning import train
-from utils.bpe_dropout import RobertaTokenizerDropout
+from bert.bert_finetuning import train
+from utils.maxMatchTokenizer import MaxMatchTokenizer
 from utils.predict import loop_pred
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--config", "-c", default="conll2003")
 logger = getLogger(__name__)
+
+ner_dict = {
+    "O": 0,
+    "B-PER": 1,
+    "I-PER": 2,
+    "B-ORG": 3,
+    "I-ORG": 4,
+    "B-LOC": 5,
+    "I-LOC": 6,
+    "B-MISC": 7,
+    "I-MISC": 8,
+    "PAD": 9,
+}
 
 
 @hydra.main(config_path="../config", config_name=parser.config, version_base="1.1")
@@ -40,20 +54,24 @@ def main(cfg):
         post_sentence_padding=cfg.post_sentence_padding,
         add_sep_between_sentences=cfg.add_sep_between_sentences,
     )
-    tokenizer = RobertaTokenizerDropout.from_pretrained(cfg.model_name, alpha=cfg.test_p)
+
+    mmt = MaxMatchTokenizer(ner_dict=ner_dict, p=cfg.test_p, padding=cfg.length)
+    bert_tokeninzer = AutoTokenizer.from_pretrained(cfg.model_name)
+    mmt.loadBertTokenizer(bertTokenizer=bert_tokeninzer)
+
     local_model = "./model/epoch19.pth"
     logger.info("Predict 2023 data")
     output_path = "./many_pred_2023.txt"
     loop_pred(
-        length=cfg.length,
-        model_name=cfg.model_name,
+        cfg.length,
+        cfg.model_name,
         test="2023",
-        tokenizer=tokenizer,
         loop=cfg.loop,
-        batch_size=cfg.test_batch,
-        p=cfg.pred_p,
+        batch_size=cfg.batch_size,
+        p=cfg.p,
         vote=cfg.vote,
         local_model=local_model,
+        pre_sentence_padding=cfg.pre_sentence_padding,
         post_sentence_padding=cfg.post_sentence_padding,
         add_sep_between_sentences=cfg.add_sep_between_sentences,
         device=cfg.device,
@@ -62,15 +80,15 @@ def main(cfg):
     logger.info("Predict valid data")
     output_path = "./many_pred_valid.txt"
     loop_pred(
-        length=cfg.length,
-        model_name=cfg.model_name,
+        cfg.length,
+        cfg.model_name,
         test="valid",
-        tokenizer=tokenizer,
         loop=cfg.loop,
-        batch_size=cfg.test_batch,
-        p=cfg.pred_p,
+        batch_size=cfg.batch_size,
+        p=cfg.p,
         vote=cfg.vote,
         local_model=local_model,
+        pre_sentence_padding=cfg.pre_sentence_padding,
         post_sentence_padding=cfg.post_sentence_padding,
         add_sep_between_sentences=cfg.add_sep_between_sentences,
         device=cfg.device,
@@ -79,15 +97,15 @@ def main(cfg):
     logger.info("Predict test data")
     output_path = "./many_pred_test.txt"
     loop_pred(
-        length=cfg.length,
-        model_name=cfg.model_name,
-        test="2003",
-        tokenizer=tokenizer,
+        cfg.length,
+        cfg.model_name,
+        test="test",
         loop=cfg.loop,
-        batch_size=cfg.test_batch,
-        p=cfg.pred_p,
+        batch_size=cfg.batch_size,
+        p=cfg.p,
         vote=cfg.vote,
         local_model=local_model,
+        pre_sentence_padding=cfg.pre_sentence_padding,
         post_sentence_padding=cfg.post_sentence_padding,
         add_sep_between_sentences=cfg.add_sep_between_sentences,
         device=cfg.device,

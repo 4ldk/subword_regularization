@@ -210,7 +210,6 @@ class MaxMatchTokenizer:
         p=None,
         return_tensor=True,
         subword_label="I",
-        pre_sentence_padding=False,
         post_sentence_padding=False,
         add_sep_between_sentences=False,
     ):
@@ -262,25 +261,6 @@ class MaxMatchTokenizer:
                             word_ids = word_ids[:max_length]
                             masked_ids = masked_ids[:max_length]
                             token_type_id = token_type_id[:max_length]
-
-                if pre_sentence_padding:
-                    while len(subwords) < max_length and i > 0:
-                        if add_sep_between_sentences and i in [d[1] for d in document["doc_index"]]:
-                            subwords = [self.sepToken] + subwords
-                            word_ids = [None] + word_ids
-                            masked_ids = [None] + masked_ids
-                            token_type_id = [0] + token_type_id
-                        i -= 1
-                        ex_subwords = self.tokenizeWord(text[i], p=p)
-                        subwords = ex_subwords + subwords
-                        word_ids = [min_with_none(word_ids) - 1] * len(ex_subwords) + word_ids
-                        masked_ids = [None] * len(ex_subwords) + masked_ids
-                        token_type_id = [0] * len(ex_subwords) + token_type_id
-                        if len(subwords) < max_length:
-                            subwords = subwords[-max_length:]
-                            word_ids = word_ids[-max_length:]
-                            masked_ids = masked_ids[-max_length:]
-                            token_type_id = token_type_id[-max_length:]
 
                 subwords = [self.clsTokenId] + [self.word2id[w] for w in subwords] + [self.sepTokenId]
                 word_ids = [None] + word_ids + [None]
