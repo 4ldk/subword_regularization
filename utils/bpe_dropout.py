@@ -61,7 +61,6 @@ class RobertaTokenizerDropout(RobertaTokenizer):
         random.seed(self.seed)
 
     def const_tokenize(self):
-        self._alpha = copy.deepcopy(self.alpha)
         self.alpha = 0
 
     def random_tokenize(self):

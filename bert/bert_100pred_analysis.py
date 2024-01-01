@@ -5,8 +5,8 @@ import seqeval.metrics
 
 def main():
     use_datasets = ["test", "2023", "valid"]  # ["test","2023","valid"]
-    model_type = "Bert"  # Bert, Roberta
-    model = "Reg"  # Reg, Normal, Reg3
+    model_type = "BertL"  # Bert, Roberta
+    model = "Reg3"  # Reg, Normal, Reg3
     max_num = 10
     zero_division = "skip"  # "skip"  # 0, 1, skip
 
@@ -78,6 +78,7 @@ def main():
     counts.append(len(f1s))
     ave_f1s.append(sum(f1s) / len(f1s))
 
+    print(f"uniformed Answer rate: {counts[0]/sum(counts)}")
     pred = np.array(pred)
     fig, ax = plt.subplots()
     ax2 = ax.twinx()

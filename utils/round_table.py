@@ -47,7 +47,6 @@ def round_table(file_iter, vote="majority"):
             continue
 
         line = line.split(" ")
-
         label = line[1]
         preds = line[2:]
 
@@ -75,13 +74,13 @@ def main(cfg):
     else:
         encoding = "utf-8"
 
-    input_path = os.path.join(root_path, "outputs100\\Bert\\Reg3test\\many_preds.txt")
+    input_path = os.path.join(root_path, "outputs100\\RobertaB\\Normalvalid.txt")
     with open(input_path, encoding=encoding) as f:
         text = f.read()
     with open("./input_pred.txt", "w", encoding=encoding) as f:
         f.write(text)
     file_iter = text.split("\n")
-    round_table(file_iter, "upper_bound")
+    round_table(file_iter, "const")
 
 
 if __name__ == "__main__":

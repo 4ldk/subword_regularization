@@ -1,4 +1,3 @@
-import argparse
 import os
 import sys
 import time
@@ -12,8 +11,6 @@ from bert.bert_finetuning import train
 from utils.maxMatchTokenizer import MaxMatchTokenizer
 from utils.predict import loop_pred
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--config", "-c", default="conll2003")
 logger = getLogger(__name__)
 
 ner_dict = {
@@ -30,14 +27,14 @@ ner_dict = {
 }
 
 
-@hydra.main(config_path="../config", config_name=parser.config, version_base="1.1")
+@hydra.main(config_path="../config", config_name="conll2003", version_base="1.1")
 def main(cfg):
     start = time.time()
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg.visible_devices
     if cfg.huggingface_cache:
         os.environ["TRANSFORMERS_CACHE"] = cfg.huggingface_cache
 
-    logger.info(f"Train Roberta\n sub_reg_p={cfg.p}\nseed={cfg.seed}")
+    logger.info(f"Train {cfg.model_name}\n sub_reg_p={cfg.p}\nseed={cfg.seed}")
     train(
         batch_size=cfg.batch_size,
         lr=cfg.lr,
@@ -71,7 +68,6 @@ def main(cfg):
         p=cfg.pred_p,
         vote=cfg.vote,
         local_model=local_model,
-        pre_sentence_padding=cfg.pre_sentence_padding,
         post_sentence_padding=cfg.post_sentence_padding,
         add_sep_between_sentences=cfg.add_sep_between_sentences,
         device=cfg.device,
@@ -88,7 +84,6 @@ def main(cfg):
         p=cfg.pred_p,
         vote=cfg.vote,
         local_model=local_model,
-        pre_sentence_padding=cfg.pre_sentence_padding,
         post_sentence_padding=cfg.post_sentence_padding,
         add_sep_between_sentences=cfg.add_sep_between_sentences,
         device=cfg.device,
@@ -105,7 +100,6 @@ def main(cfg):
         p=cfg.pred_p,
         vote=cfg.vote,
         local_model=local_model,
-        pre_sentence_padding=cfg.pre_sentence_padding,
         post_sentence_padding=cfg.post_sentence_padding,
         add_sep_between_sentences=cfg.add_sep_between_sentences,
         device=cfg.device,

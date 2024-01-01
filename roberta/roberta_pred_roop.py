@@ -46,12 +46,12 @@ def main(cfg):
 
     tokenizer = RobertaTokenizerDropout.from_pretrained(cfg.model_name, alpha=cfg.pred_p)
     loop_pred(
-        cfg.length,
-        cfg.model_name,
-        cfg.test,
-        tokenizer,
+        length=cfg.length,
+        model_name=cfg.model_name,
+        test=cfg.test,
+        tokenizer=tokenizer,
         loop=cfg.loop,
-        batch_size=cfg.batch_size,
+        batch_size=cfg.test_batch,
         p=cfg.pred_p,
         vote=cfg.vote,
         local_model=cfg.local_model,

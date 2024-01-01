@@ -6,11 +6,11 @@ hydra:
 batch_size: 32
 lr: 5e-5
 num_epoch: 20
-length: 512
+length: 510
 p: 0
 seed: 42
 device: "cuda"
-model_name: "bert-large-cased" # bert-large-cesed roberta-large
+model_name: "roberta-base" # bert-large-cesed roberta-large
 
 accum_iter: 1
 weight_decay: 0.01
@@ -23,9 +23,9 @@ add_sep_between_sentences: True
 
 test: "2003" # 2003, 2023, crossweigh valid
 
-local_model: "model/BertLargeReg3.pth" # "outputs\\bert_finetuning\\yyyy-mm-dd\\hh-mm-ss\\model\\epochx.pth"
-test_batch: 16
-loop: 101
+local_model: "model/epoch19.pth" # "outputs\\bert_finetuning\\yyyy-mm-dd\\hh-mm-ss\\model\\epochx.pth"
+test_batch: 4
+loop: 1
 pred_p: 0.1
 vote: majority
 

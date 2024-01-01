@@ -166,7 +166,7 @@ def pred(
                 input.to(device),
                 mask.to(device),
             )
-            if "bert" in model_name:
+            if model_name.startswith("bert-"):
                 preds = model(input, mask, type_ids.to(device)).logits.argmax(-1).to("cpu").tolist()
             else:
                 preds = model(input, mask).logits.argmax(-1).to("cpu").tolist()

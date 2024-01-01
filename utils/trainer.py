@@ -69,7 +69,7 @@ class trainer:
         self.post_sentence_padding = post_sentence_padding
         self.add_sep_between_sentences = add_sep_between_sentences
 
-    def forward(self, input, mask, type_ids, label=None):
+    def forward(self, input, mask, type_ids=None, label=None):
         logits = self.model(input, mask, type_ids).logits
         pred = logits.squeeze(-1).argmax(-1)
 
@@ -82,6 +82,7 @@ class trainer:
     def train(self, tokenizer, train_dataset, train_loader, num_epoch, valid_loader=None, test_loader=None, p=0):
         f1s = []
         losses = []
+        tes_f1s = []
         for epoch in tqdm(range(num_epoch)):
             loss, _, _ = self.step(epoch, train_loader, train=True)
             _, valid_acc, valid_f1 = self.step(epoch, valid_loader, train=False)
@@ -89,6 +90,7 @@ class trainer:
 
             f1s.append(valid_f1)
             losses.append(loss)
+            tes_f1s.append(test_f1)
             tqdm.write(
                 f"Epoch{epoch}: loss: {loss}, val_acc: {valid_acc:.4f}, val_f1: {valid_f1:.4f}, tes_f1: {test_f1:.4f}"
             )
@@ -110,8 +112,8 @@ class trainer:
             min_loss = 100
             max_f1 = 0
             best_epoch = 0
-            for i, (loss, f1) in enumerate(zip(losses, f1s)):
-                f.write(f"{i}, {loss}, {f1}\n")
+            for i, (loss, f1, t_f1) in enumerate(zip(losses, f1s, tes_f1s)):
+                f.write(f"{i}, {loss}, {f1}, {t_f1}\n")
                 if f1 > max_f1:
                     max_f1 = f1
                     best_epoch = i
@@ -143,7 +145,7 @@ class trainer:
 
             if train:
                 with torch.amp.autocast(self.device, dtype=torch.bfloat16):
-                    if self.model_name:
+                    if self.model_name.startswith("bert-"):
                         logits, pred, loss = self.forward(input, mask, type_ids.to(self.device), label)
                     else:
                         logits, pred, loss = self.forward(input, mask, label)

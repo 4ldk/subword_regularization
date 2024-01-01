@@ -311,7 +311,7 @@ class MaxMatchTokenizer:
                 "attention_mask": torch.tensor(attention_mask, dtype=torch.int),
                 "token_type_ids": torch.tensor(token_type_ids, dtype=torch.int),
                 "subword_labels": torch.tensor(subword_labels, dtype=torch.long),
-                "predict_labels": torch.tensor(predict_labels, dtype=torch.int),
+                "predict_labels": torch.tensor(predict_labels, dtype=torch.long),
                 "tokens": row_tokens,
                 "labels": row_labels,
                 "weight": torch.tensor(weight, dtype=torch.float32),
