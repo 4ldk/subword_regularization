@@ -5,18 +5,23 @@ import seqeval.metrics
 
 def main():
     use_datasets = ["test", "2023", "valid"]  # ["test","2023","valid"]
-    model_type = "BertL"  # Bert, Roberta
-    model = "Reg3"  # Reg, Normal, Reg3
+    model_type = "BertB"  # BertL, RobertaL, BertB, RobertaB
+    model = "Normal"  # Reg, Normal, Reg3
     max_num = 10
     zero_division = "skip"  # "skip"  # 0, 1, skip
 
     datasets = []
+
     for u_d in use_datasets:
         if u_d == 2003:
             encoding = "cp-932"
         else:
             encoding = "utf-8"
-        with open(f"./outputs100/{model_type}/{model}{u_d}/many_preds.txt", encoding=encoding) as f:
+        if model_type == "BertL":
+            path = f"./outputs100/{model_type}/{model}{u_d}/many_preds.txt"
+        else:
+            path = f"./outputs100/{model_type}/{model}{u_d}.txt"
+        with open(path, encoding=encoding) as f:
             dataset = f.read()
         dataset = dataset.split("\n\n")
         datasets += dataset
