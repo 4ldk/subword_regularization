@@ -181,10 +181,10 @@ def path_to_data(path):
 
 
 def get_label(word_ids, label, subword_label):
-    previous_word_idx = None
+    previous_word_idx = -100
     label_ids = []
     for word_idx in word_ids:
-        if word_idx is None:
+        if word_idx == -100:
             label_ids.append(ner_dict["PAD"])
         elif word_idx != previous_word_idx:  # Only label the first token of a given word.
             label_ids.append(label[word_idx])
@@ -206,7 +206,7 @@ def get_label(word_ids, label, subword_label):
 def dataset_encode(
     tokenizer,
     data,
-    p=0,
+    p=None,
     padding=512,
     return_tensor=True,
     subword_label="I",
@@ -220,18 +220,10 @@ def dataset_encode(
             post_sentence_padding=post_sentence_padding,
             add_sep_between_sentences=add_sep_between_sentences,
         )
-    if p == 0:
+    if p is None or p == 0:
         tokenizer.const_tokenize()
     else:
         tokenizer.random_tokenize()
-
-    def max_with_none(lst):
-        lst = [ls for ls in lst if ls is not None]
-        return max(lst)
-
-    def min_with_none(lst):
-        lst = [ls for ls in lst if ls is not None]
-        return min(lst)
 
     row_tokens = []
     row_labels = []
@@ -255,12 +247,12 @@ def dataset_encode(
                 while len(subwords) < max_length and j < len(text):
                     if add_sep_between_sentences and j in [d[0] for d in document["doc_index"]]:
                         subwords.append(tokenizer.sep_token)
-                        word_ids.append(None)
-                        masked_ids.append(None)
+                        word_ids.append(-100)
+                        masked_ids.append(-100)
                     ex_subwords = tokenizer.tokenize(" " + text[j])
                     subwords = subwords + ex_subwords
-                    word_ids = word_ids + [max_with_none(word_ids) + 1] * len(ex_subwords)
-                    masked_ids = masked_ids + [None] * len(ex_subwords)
+                    word_ids = word_ids + [max(word_ids) + 1] * len(ex_subwords)
+                    masked_ids = masked_ids + [-100] * len(ex_subwords)
                     j += 1
                     if len(subwords) < max_length:
                         subwords = subwords[:max_length]
@@ -271,8 +263,8 @@ def dataset_encode(
                 + [tokenizer._convert_token_to_id(w) for w in subwords]
                 + [tokenizer.sep_token_id]
             )
-            word_ids = [None] + word_ids + [None]
-            masked_ids = [None] + masked_ids + [None]
+            word_ids = [-100] + word_ids + [-100]
+            masked_ids = [-100] + masked_ids + [-100]
 
             if len(subwords) >= padding:
                 subwords = subwords[:padding]
@@ -284,15 +276,14 @@ def dataset_encode(
                 attention_len = len(subwords)
                 pad_len = padding - len(subwords)
                 subwords += [tokenizer.pad_token_id] * pad_len
-                word_ids += [None] * pad_len
-                masked_ids += [None] * pad_len
+                word_ids += [-100] * pad_len
+                masked_ids += [-100] * pad_len
                 mask = [1] * attention_len + [0] * pad_len
 
             input_ids.append(subwords)
             attention_mask.append(mask)
 
             label = labels[i:j]
-            word_ids = [w_i - min_with_none(word_ids) if w_i is not None else None for w_i in word_ids]
             label_ids = get_label(word_ids, label, subword_label)
             subword_labels.append(label_ids)
 
@@ -305,6 +296,8 @@ def dataset_encode(
     loss_rate = compute_sample_weight("balanced", y=weight_y)
     weight = [loss_rate[weight_y.index(i)] for i in range(len(set(weight_y)))]
     weight.append(0)
+
+    tokenizer.random_tokenize()
 
     if return_tensor:
         data = {
