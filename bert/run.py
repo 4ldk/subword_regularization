@@ -96,7 +96,7 @@ def main(cfg):
     loop_pred(
         cfg.length,
         cfg.model_name,
-        test="test",
+        test="2003",
         tokenizer=mmt,
         loop=cfg.loop,
         batch_size=cfg.batch_size,
