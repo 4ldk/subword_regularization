@@ -165,7 +165,10 @@ class trainer:
             else:
                 with torch.no_grad():
                     with torch.amp.autocast(self.device, dtype=torch.bfloat16):
-                        logits, pred, loss = self.forward(input, mask, type_ids, label)
+                        if self.model_name.startswith("bert-"):
+                            logits, pred, loss = self.forward(input, mask, type_ids.to(self.device), label)
+                        else:
+                            logits, pred, loss = self.forward(input, mask, label)
                     preds.append(pred)
                     labels.append(label.to("cpu"))
 
