@@ -107,12 +107,12 @@ class MaxMatchTokenizer:
             subwords = [self.clsTokenId] + [
                 self.word2id[w] for line in text for w in self.tokenize(line, p)[0] + [self.sepToken]
             ]
-            word_ids = [None] + [self.tokenize(line, p)[1] for line in text + [None]]
+            word_ids = [-100] + [self.tokenize(line, p)[1] for line in text + [-100]]
 
             return subwords, word_ids
         subwords, word_ids = self.tokenize(text, p)
         subwords = [self.clsTokenId] + [self.word2id[w] for w in subwords] + [self.sepTokenId]
-        word_ids = [None] + word_ids + [None]
+        word_ids = [-100] + word_ids + [-100]
         if self.padding:
             if len(subwords) >= self.padding:
                 subwords = subwords[: self.padding]
@@ -122,7 +122,7 @@ class MaxMatchTokenizer:
                 attention_len = len(subwords)
                 pad_len = self.padding - len(subwords)
                 subwords += [self.padTokenId] * pad_len
-                word_ids += [None] * pad_len
+                word_ids += [-100] * pad_len
                 attention_mask = [1] * attention_len + [0] * pad_len
 
         else:
