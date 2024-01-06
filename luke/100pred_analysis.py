@@ -4,7 +4,7 @@ from LUKE_utils import boi1_to_2, round_preds
 
 random.seed(42)
 
-path = "./outputs100/output_2023.txt"
+path = "./outputs100/luke/output_2023.txt"
 tags = {
     "O": 0,
     "B-PER": 1,

@@ -34,7 +34,7 @@ def main(cfg):
     if cfg.huggingface_cache:
         os.environ["TRANSFORMERS_CACHE"] = cfg.huggingface_cache
 
-    logger.info(f"Train {cfg.model_name}\n sub_reg_p={cfg.p}\nseed={cfg.seed}")
+    logger.info(f"Train {cfg.model_name}\nsub_reg_p={cfg.p}\nseed={cfg.seed}")
     train(
         batch_size=cfg.batch_size,
         lr=cfg.lr,

@@ -12,7 +12,7 @@ def main():
     dataset_list = []
 
     for u_d in use_datasets:
-        with open(f"./outputs100/dataset_{u_d}.pkl", mode="rb") as f:
+        with open(f"./outputs100/LUKE/dataset_{u_d}.pkl", mode="rb") as f:
             dataset = pickle.load(f)
         dataset_list.append(dataset)
 
@@ -72,6 +72,10 @@ def main():
     nums.append(pre_num)
     counts.append(len(f1s))
     ave_f1s.append(sum(f1s) / len(f1s))
+
+    sum_count = sum([n * c for n, c in zip(nums, counts)])
+    print(f"average variation: {(sum_count/sum(counts)):.3}")
+    print(f"uniformed Answer rate: {(counts[0]/sum(counts)):.2}")
 
     pred = np.array(pred)
     fig, ax = plt.subplots()

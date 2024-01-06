@@ -1,15 +1,17 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import seqeval.metrics
+import japanize_matplotlib
 
 
-def main():
-    use_datasets = ["test", "2023", "valid"]  # ["test","2023","valid"]
-    model_type = "BertB"  # BertL, RobertaL, BertB, RobertaB
-    model = "Normal"  # Reg, Normal, Reg3
-    max_num = 10
-    zero_division = "skip"  # "skip"  # 0, 1, skip
-
+def analysis(
+    use_datasets=["test", "2023", "valid"],
+    model_type="RobertaL",
+    model="Normal",
+    max_num=100,
+    zero_division="skip",
+    graph=True,
+):
     datasets = []
 
     for u_d in use_datasets:
@@ -83,7 +85,12 @@ def main():
     counts.append(len(f1s))
     ave_f1s.append(sum(f1s) / len(f1s))
 
-    print(f"uniformed Answer rate: {counts[0]/sum(counts)}")
+    sum_count = sum([n * c for n, c in zip(nums, counts)])
+    print(f"average variation: {(sum_count/sum(counts)):.3}")
+    print(f"uniformed Answer rate: {(counts[0]/sum(counts)):.2}")
+
+    if not graph:
+        return 0
     pred = np.array(pred)
     fig, ax = plt.subplots()
     ax2 = ax.twinx()
@@ -93,9 +100,12 @@ def main():
     ax.set_ylim(0.70, 1)
     ax2.set_ylim(0.9, 7500)
 
-    ax.set_xlabel("Number of output variations")
-    ax.set_ylabel("F1 micro average")
-    ax2.set_ylabel("Number of sentences")
+    ax.set_xlabel("ラベル列の種類数", fontsize=13)  # Number of output variations
+    ax.set_ylabel("F1スコア", fontsize=13)  # F1 micro average
+    ax2.set_ylabel("その種類数だった文の数", fontsize=13)  # Number of sentences
+
+    ax.tick_params(labelsize=13, direction="in")
+    ax2.tick_params(labelsize=13, direction="in")
 
     ax.set_zorder(2)
     ax2.set_zorder(1)
@@ -105,6 +115,11 @@ def main():
 
     # """
     # ラベル数-F11の分布表示
+
+    plt.rcParams["xtick.direction"] = "in"  # x軸の目盛りの向き
+    plt.rcParams["ytick.direction"] = "in"  # y軸の目盛りの向き
+    plt.rcParams["font.size"] = 13
+
     length = np.array(length)
     f1_for_length = np.array(f1_for_length)
     plt.scatter(length, f1_for_length, s=4)
@@ -113,12 +128,29 @@ def main():
     y2 = a * length + b
     plt.plot(length, y2, color="k")
 
-    plt.xlabel("Number of labels")
-    plt.ylabel("F1 micro average")
+    plt.xlabel("1文の中のラベル数")  # Number of labels
+    plt.ylabel("F1スコア")  # F1 micro average
 
     plt.show()
     # """
 
 
 if __name__ == "__main__":
-    main()
+    _use_datasets = ["valid", "test", "2023"]
+    model_types = ["RobertaL"]  # ["BertB", "BertL", "RobertaB", "RobertaL"]
+    models = ["Reg"]  # ["Normal", "Reg", "Reg3"]
+    max_num = 10
+    zero_division = "skip"
+
+    for model_type in model_types:
+        for model in models:
+            for use_datasets in _use_datasets:
+                analysis(
+                    use_datasets=_use_datasets,
+                    model_type=model_type,
+                    model=model,
+                    max_num=max_num,
+                    zero_division=zero_division,
+                    graph=True,
+                )
+                exit()
