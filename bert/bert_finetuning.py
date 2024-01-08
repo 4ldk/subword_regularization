@@ -115,9 +115,7 @@ def train(
         post_sentence_padding=post_sentence_padding,
         add_sep_between_sentences=add_sep_between_sentences,
     )
-    valid_loader = get_dataloader(
-        valid_data, batch_size=batch_size, shuffle=False, drop_last=False, label_name="predict_labels"
-    )
+    valid_loader = get_dataloader(valid_data, batch_size=batch_size, shuffle=False, drop_last=False)
 
     test_dataset = path_to_data(os.path.join(root_path, "test_datasets/eng.testb"))
     test_data = mmt.dataset_encode(
@@ -127,9 +125,7 @@ def train(
         post_sentence_padding=post_sentence_padding,
         add_sep_between_sentences=add_sep_between_sentences,
     )
-    test_loader = get_dataloader(
-        test_data, batch_size=batch_size, shuffle=False, drop_last=False, label_name="predict_labels"
-    )
+    test_loader = get_dataloader(test_data, batch_size=batch_size, shuffle=False, drop_last=False)
 
     weight = train_data["weight"].to(device) if use_loss_weight else None
     num_training_steps = int(len(train_loader) / accum_iter) * num_epoch

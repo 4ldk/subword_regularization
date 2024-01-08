@@ -82,7 +82,7 @@ class MultiViewDataset(Dataset):
         return len(self.datasets[0])
 
     def __getitem__(self, idx):
-        return (d[idx] for d in self.datasets)
+        return tuple(d[idx] for d in self.datasets)
 
 
 def recall_score(target, pred, average="micro", skip=-1):
