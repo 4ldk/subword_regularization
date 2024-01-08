@@ -3,12 +3,13 @@ import shutil
 import sys
 
 import torch
+import torch.nn.functional as F
 from torch import nn, optim
 from tqdm import tqdm
 from transformers import AutoModelForTokenClassification, get_linear_schedule_with_warmup
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-from utils.utils import dataset_encode, f1_score, get_dataloader
+from utils.utils import dataset_encode, f1_score, get_dataloader, get_mv_dataloader
 
 ner_dict = {
     "O": 0,
@@ -40,6 +41,10 @@ class trainer:
         init_scale=4096,
         post_sentence_padding=False,
         add_sep_between_sentences=False,
+        multi_view=False,
+        kl_weight=0.6,
+        kl_t=1,
+        const_data=None,
         device="cuda",
     ):
         self.model = AutoModelForTokenClassification.from_pretrained(model_name, num_labels=len(ner_dict)).to(device)
@@ -56,6 +61,7 @@ class trainer:
         self.optimizer = optim.AdamW(optimizer_grouped_parameters, lr=lr)
 
         self.loss_func = nn.CrossEntropyLoss(weight=weight, ignore_index=ner_dict["PAD"])
+        self.mv_loss_func = nn.KLDivLoss(reduction="batchmean")
         self.scaler = torch.cuda.amp.GradScaler(init_scale=init_scale)
         if use_scheduler:
             self.scheduler = get_linear_schedule_with_warmup(self.optimizer, num_warmup_steps, num_training_steps)
@@ -68,6 +74,10 @@ class trainer:
         self.accum_iter = accum_iter
         self.post_sentence_padding = post_sentence_padding
         self.add_sep_between_sentences = add_sep_between_sentences
+        self.multi_view = multi_view
+        self.kl_weight = kl_weight
+        self.kl_t = kl_t
+        self.const_data = const_data
 
     def forward(self, input, mask, type_ids=None, label=None):
         logits = self.model(input, mask, type_ids).logits
@@ -79,14 +89,90 @@ class trainer:
 
         return logits, pred.to("cpu")
 
+    def step(self, batch, batch_idx, batch_num, train=True):
+        if len(batch) == 2:
+            const_batch = batch[0]
+            random_batch = batch[1]
+
+            logits, pred, loss, label = self.step(const_batch, batch_idx, batch_num, train)
+            mask = const_batch[-1] != ner_dict["PAD"]
+            prob = F.softmax(logits[mask] / self.kl_t, dim=1)
+
+            random_logits, random_pred, random_loss, _ = self.step(random_batch, batch_idx, batch_num, train)
+            random_mask = random_batch[-1] != ner_dict["PAD"]
+            random_prob = F.log_softmax(random_logits[random_mask], dim=1)
+            # こっちだけlogなのはKLDivLossの公式実装に合わせるため
+
+            kl_loss = self.mv_loss_func(random_prob, prob)
+            final_loss = (loss + random_loss) / 2 + self.kl_weight * kl_loss
+
+            return random_logits, random_pred, final_loss, label
+
+        else:
+            input, mask, label, type_ids = (
+                batch[0].to(self.device),
+                batch[1].to(self.device),
+                batch[2].to(self.device),
+                batch[3].to(self.device),
+            )
+
+            if train:
+                with torch.amp.autocast(self.device, dtype=torch.bfloat16):
+                    logits, pred, loss = self.forward(input, mask, type_ids, label)
+
+                self.scaler.scale(loss / self.accum_iter).backward()
+                if ((batch_idx + 1) % self.accum_iter == 0) or (batch_idx + 1 == batch_num):
+                    self.scaler.unscale_(self.optimizer)
+                    nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
+                    self.scaler.step(self.optimizer)
+                    self.optimizer.step()
+                    self.scaler.update()
+
+                    if self.use_scheduler:
+                        self.scheduler.step()
+                    self.optimizer.zero_grad()
+
+            else:
+                with torch.no_grad():
+                    with torch.amp.autocast(self.device, dtype=torch.bfloat16):
+                        logits, pred, loss = self.forward(input, mask, type_ids, label)
+
+            return logits, pred, loss, label
+
+    def epoch_loop(self, epoch, loader, train=True):
+        if train:
+            self.model.train()
+        else:
+            self.model.eval()
+        bar = tqdm(loader, leave=False, desc=f"Epoch{epoch} ")
+        batch_loss, preds, labels = [], [], []
+        final_loss, acc, f1 = 0, 0, 0
+
+        for batch_idx, batch in enumerate(bar):
+            logits, pred, loss, label = self.step(batch, batch_idx, batch_num=len(loader), train=train)
+            bar.set_postfix(loss=loss.to("cpu").item())
+            if train:
+                batch_loss.append(loss.to("cpu").item())
+            else:
+                preds.append(pred)
+                labels.append(label.to("cpu"))
+
+        if train:
+            final_loss = sum(batch_loss) / len(batch_loss)
+            save_path = f"./model/epoch{epoch}.pth"
+            torch.save(self.model.state_dict(), save_path)
+        else:
+            acc, f1 = self.get_score(preds, labels)
+        return final_loss, acc, f1
+
     def train(self, tokenizer, train_dataset, train_loader, num_epoch, valid_loader=None, test_loader=None, p=0):
         f1s = []
         losses = []
         tes_f1s = []
         for epoch in tqdm(range(num_epoch)):
-            loss, _, _ = self.step(epoch, train_loader, train=True)
-            _, valid_acc, valid_f1 = self.step(epoch, valid_loader, train=False)
-            _, _, test_f1 = self.step(epoch, test_loader, train=False)
+            loss, _, _ = self.epoch_loop(epoch, train_loader, train=True)
+            _, valid_acc, valid_f1 = self.epoch_loop(epoch, valid_loader, train=False)
+            _, _, test_f1 = self.epoch_loop(epoch, test_loader, train=False)
 
             f1s.append(valid_f1)
             losses.append(loss)
@@ -106,7 +192,12 @@ class trainer:
                     post_sentence_padding=self.post_sentence_padding,
                     add_sep_between_sentences=self.add_sep_between_sentences,
                 )
-                train_loader = get_dataloader(train_data, batch_size=self.batch_size, shuffle=True)
+                if self.multi_view:
+                    train_loader = get_mv_dataloader(
+                        train_data, self.const_data, batch_size=self.batch_size, shuffle=True
+                    )
+                else:
+                    train_loader = get_dataloader(train_data, batch_size=self.batch_size, shuffle=True)
 
         with open("./train_valid_score.csv", "w") as f:
             min_loss = 100
@@ -126,61 +217,6 @@ class trainer:
             shutil.copy(f"./model/epoch{best_epoch}.pth", "./model/best.pth")
         for i in range(num_epoch - 1):
             os.remove(f"./model/epoch{i}.pth")
-
-    def step(self, epoch, loader, train=True):
-        if train:
-            self.model.train()
-        else:
-            self.model.eval()
-        bar = tqdm(loader, leave=False, desc=f"Epoch{epoch} ")
-        batch_loss, preds, labels = [], [], []
-        final_loss, acc, f1 = 0, 0, 0
-
-        for batch_idx, (input, mask, type_ids, label) in enumerate(bar):
-            input, mask, label = (
-                input.to(self.device),
-                mask.to(self.device),
-                label.to(self.device),
-            )
-
-            if train:
-                with torch.amp.autocast(self.device, dtype=torch.bfloat16):
-                    if self.model_name.startswith("bert-"):
-                        logits, pred, loss = self.forward(input, mask, type_ids.to(self.device), label)
-                    else:
-                        logits, pred, loss = self.forward(input, mask, label)
-
-                self.scaler.scale(loss / self.accum_iter).backward()
-                if ((batch_idx + 1) % self.accum_iter == 0) or (batch_idx + 1 == len(loader)):
-                    self.scaler.unscale_(self.optimizer)
-                    nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
-                    self.scaler.step(self.optimizer)
-                    self.optimizer.step()
-                    self.scaler.update()
-
-                    if self.use_scheduler:
-                        self.scheduler.step()
-                    self.optimizer.zero_grad()
-                batch_loss.append(loss.to("cpu").item())
-            else:
-                with torch.no_grad():
-                    with torch.amp.autocast(self.device, dtype=torch.bfloat16):
-                        if self.model_name.startswith("bert-"):
-                            logits, pred, loss = self.forward(input, mask, type_ids.to(self.device), label)
-                        else:
-                            logits, pred, loss = self.forward(input, mask, label)
-                    preds.append(pred)
-                    labels.append(label.to("cpu"))
-
-            bar.set_postfix(loss=loss.to("cpu").item())
-
-        if train:
-            final_loss = sum(batch_loss) / len(batch_loss)
-            save_path = f"./model/epoch{epoch}.pth"
-            torch.save(self.model.state_dict(), save_path)
-        else:
-            acc, f1 = self.get_score(preds, labels)
-        return final_loss, acc, f1
 
     def get_score(self, preds, labels):
         preds = torch.concatenate(preds)

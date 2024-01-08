@@ -50,6 +50,9 @@ def main(cfg):
         warmup_late=cfg.warmup_late,
         post_sentence_padding=cfg.post_sentence_padding,
         add_sep_between_sentences=cfg.add_sep_between_sentences,
+        multi_view=cfg.multi_view,
+        kl_weight=cfg.kl_weight,
+        kl_t=cfg.kl_t,
     )
 
     mmt = MaxMatchTokenizer(ner_dict=ner_dict, p=cfg.pred_p, padding=cfg.length)

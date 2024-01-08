@@ -10,7 +10,7 @@ from transformers import AutoTokenizer
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from utils.maxMatchTokenizer import MaxMatchTokenizer
 from utils.trainer import trainer
-from utils.utils import get_dataloader, path_to_data
+from utils.utils import get_dataloader, get_mv_dataloader, path_to_data
 
 root_path = os.getcwd()
 ner_dict = {
@@ -47,6 +47,9 @@ def main(cfg):
         warmup_late=cfg.warmup_late,
         post_sentence_padding=cfg.post_sentence_padding,
         add_sep_between_sentences=cfg.add_sep_between_sentences,
+        multi_view=cfg.multi_view,
+        kl_weight=cfg.kl_weight,
+        kl_t=cfg.kl_t,
     )
 
 
@@ -65,6 +68,9 @@ def train(
     warmup_late=0.01,
     post_sentence_padding=False,
     add_sep_between_sentences=False,
+    multi_view=False,
+    kl_weight=0.6,
+    kl_t=1,
 ):
     random.seed(seed)
     np.random.seed(seed)
@@ -88,7 +94,18 @@ def train(
         post_sentence_padding=post_sentence_padding,
         add_sep_between_sentences=add_sep_between_sentences,
     )
-    train_loader = get_dataloader(train_data, batch_size=batch_size, shuffle=True)
+    if multi_view:
+        const_data = mmt.dataset_encode(
+            train_dataset,
+            p=0,
+            subword_label="PAD",
+            post_sentence_padding=post_sentence_padding,
+            add_sep_between_sentences=add_sep_between_sentences,
+        )
+        train_loader = get_mv_dataloader(const_data, train_data, batch_size=batch_size, shuffle=True)
+    else:
+        const_data = None
+        train_loader = get_dataloader(train_data, batch_size=batch_size, shuffle=True)
 
     valid_dataset = path_to_data(os.path.join(root_path, "test_datasets/eng.testa"))
     valid_data = mmt.dataset_encode(
@@ -132,6 +149,10 @@ def train(
         init_scale=init_scale,
         post_sentence_padding=post_sentence_padding,
         add_sep_between_sentences=add_sep_between_sentences,
+        multi_view=multi_view,
+        kl_weight=kl_weight,
+        kl_t=kl_t,
+        const_data=const_data,
         device=device,
     )
     net.train(mmt, train_dataset, train_loader, num_epoch, valid_loader=valid_loader, test_loader=test_loader, p=p)

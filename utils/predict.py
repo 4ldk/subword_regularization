@@ -161,7 +161,7 @@ def pred(
 
     output = []
     with torch.no_grad():
-        for i, (input, mask, type_ids, label) in enumerate(tqdm(dataloader, leave=False)):
+        for i, (input, mask, type_ids, label, _) in enumerate(tqdm(dataloader, leave=False)):
             input, mask = (
                 input.to(device),
                 mask.to(device),

@@ -38,7 +38,14 @@ subword_dict = {
 
 
 class BertDataset(Dataset):
-    def __init__(self, X, mask, type_ids, y) -> None:
+    def __init__(self, data) -> None:
+        X, mask, type_ids, y, predict_y = (
+            data["input_ids"],
+            data["attention_mask"],
+            data["token_type_ids"],
+            data["subword_labels"],
+            data["predict_labels"],
+        )
         super().__init__()
         if type(X) is not torch.Tensor:
             X = torch.tensor(X)
@@ -48,17 +55,34 @@ class BertDataset(Dataset):
             type_ids = torch.tensor(type_ids)
         if type(y) is not torch.Tensor:
             y = torch.tensor(y)
+        if type(predict_y) is not torch.Tensor:
+            predict_y = torch.tensor(predict_y)
 
         self.X = X
         self.mask = mask
         self.type_ids = type_ids
         self.y = y
+        self.predict_y = predict_y
 
     def __len__(self):
         return len(self.X)
 
     def __getitem__(self, idx):
-        return self.X[idx], self.mask[idx], self.type_ids[idx], self.y[idx]
+        return self.X[idx], self.mask[idx], self.type_ids[idx], self.y[idx], self.predict_y
+
+
+class MultiViewDataset(Dataset):
+    def __init__(self, datasets) -> None:
+        super().__init__()
+        self.datasets = datasets
+        # 0: const
+        # 1: random
+
+    def __len__(self):
+        return len(self.datasets[0])
+
+    def __getitem__(self, idx):
+        return (d[idx] for d in self.datasets)
 
 
 def recall_score(target, pred, average="micro", skip=-1):
@@ -108,14 +132,20 @@ def get_texts_and_labels(dataset):
     return data
 
 
-def get_dataloader(data, batch_size, shuffle=True, drop_last=True, label_name="subword_labels"):
-    ids, mask, type_ids, labels = (
-        data["input_ids"],
-        data["attention_mask"],
-        data["token_type_ids"],
-        data[label_name],
+def get_dataloader(data, batch_size, shuffle=True, drop_last=True):
+    dataset = BertDataset(data)
+    dataloader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        drop_last=drop_last,
     )
-    dataset = BertDataset(ids, mask, type_ids, labels)
+    return dataloader
+
+
+def get_mv_dataloader(const_data, random_data, batch_size, shuffle=True, drop_last=True):
+    datasets = [BertDataset(d) for d in [const_data, random_data]]
+    dataset = MultiViewDataset(datasets)
     dataloader = DataLoader(
         dataset,
         batch_size=batch_size,
