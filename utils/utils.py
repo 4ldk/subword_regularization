@@ -68,7 +68,7 @@ class BertDataset(Dataset):
         return len(self.X)
 
     def __getitem__(self, idx):
-        return self.X[idx], self.mask[idx], self.type_ids[idx], self.y[idx], self.predict_y
+        return self.X[idx], self.mask[idx], self.type_ids[idx], self.y[idx], self.predict_y[idx]
 
 
 class MultiViewDataset(Dataset):

@@ -102,7 +102,7 @@ def analysis(
 
     ax.set_xlabel("ラベル列の種類数", fontsize=13)  # Number of output variations
     ax.set_ylabel("F1スコア", fontsize=13)  # F1 micro average
-    ax2.set_ylabel("その種類数だった文の数", fontsize=13)  # Number of sentences
+    ax2.set_ylabel("その種類数だった文の数", fontsize=13, color="#175e98")  # Number of sentences
 
     ax.tick_params(labelsize=13, direction="in")
     ax2.tick_params(labelsize=13, direction="in")
@@ -138,8 +138,8 @@ def analysis(
 if __name__ == "__main__":
     _use_datasets = ["valid", "test", "2023"]
     model_types = ["RobertaL"]  # ["BertB", "BertL", "RobertaB", "RobertaL"]
-    models = ["Reg"]  # ["Normal", "Reg", "Reg3"]
-    max_num = 10
+    models = ["Normal"]  # ["Normal", "Reg", "Reg3"]
+    max_num = 100
     zero_division = "skip"
 
     for model_type in model_types:

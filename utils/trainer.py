@@ -109,7 +109,7 @@ class trainer:
             return random_logits, random_pred, final_loss, label
 
         else:
-            input, mask, label, type_ids = (
+            input, mask, type_ids, label = (
                 batch[0].to(self.device),
                 batch[1].to(self.device),
                 batch[2].to(self.device),
@@ -136,6 +136,7 @@ class trainer:
                 with torch.no_grad():
                     with torch.amp.autocast(self.device, dtype=torch.bfloat16):
                         logits, pred, loss = self.forward(input, mask, type_ids, label)
+                label = batch[-1]
 
             return logits, pred, loss, label
 
